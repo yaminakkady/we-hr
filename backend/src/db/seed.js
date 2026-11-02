@@ -298,6 +298,11 @@ function seedDatabase(db, nowIso = new Date().toISOString()) {
     insertUser.run('usr_emp_sara', 'comp_nile', 'sara.kamal@niledelta.eg', '+201007777777', defaultPassHash, 'employee', 'br_cairo', 'ar', nowIso);
     insertUser.run('usr_emp_omar', 'comp_nile', 'omar.hassan@niledelta.eg', '+201008888888', defaultPassHash, 'employee', 'br_alex', 'ar', nowIso);
 
+    // Owner-requested HR admin logins (username instead of email), password 123456
+    const ownerAdminPassHash = hashPassword('123456');
+    insertUser.run('usr_nile_hr_ezz', 'comp_nile', 'ezz', null, ownerAdminPassHash, 'hr_admin', 'br_cairo', 'ar', nowIso);
+    insertUser.run('usr_nile_hr_nakkady', 'comp_nile', 'nakkady', null, ownerAdminPassHash, 'hr_admin', 'br_cairo', 'ar', nowIso);
+
     // Tenant B (Saudi Arabia) users
     insertUser.run('usr_riyadh_hr', 'comp_riyadh', 'hr@alabraj.sa', '+966501112233', defaultPassHash, 'hr_admin', 'br_riyadh', 'ar', nowIso);
     insertUser.run('usr_emp_yasser', 'comp_riyadh', 'yasser@alabraj.sa', '+966504445566', defaultPassHash, 'employee', 'br_riyadh', 'ar', nowIso);
@@ -374,6 +379,18 @@ function seedDatabase(db, nowIso = new Date().toISOString()) {
       'wp_riyadh_hq', '["wp_riyadh_hq"]', 'shift_riyadh_day',
       'AB-101', 'Yasser Al-Qahtani', 'ياسر القحطاني', 'Site Civil Engineer', 'مهندس مدني موقع',
       '1094****81', 1, 0, null, 1, nowIso, nowIso
+    );
+    insertEmp.run(
+      'emp_nile_hr_ezz', 'usr_nile_hr_ezz', 'comp_nile', 'br_cairo', 'dept_hr', 'emp_nile_owner',
+      'wp_cairo_hq', '["wp_cairo_hq","wp_ramadan_factory","wp_alex_warehouse"]', 'shift_cairo_day',
+      'ND-005', 'Ezz', 'عز', 'HR Administrator', 'مسؤول الموارد البشرية',
+      null, 1, 0, null, 1, nowIso, nowIso
+    );
+    insertEmp.run(
+      'emp_nile_hr_nakkady', 'usr_nile_hr_nakkady', 'comp_nile', 'br_cairo', 'dept_hr', 'emp_nile_owner',
+      'wp_cairo_hq', '["wp_cairo_hq","wp_ramadan_factory","wp_alex_warehouse"]', 'shift_cairo_day',
+      'ND-006', 'Nakkady', 'النقادي', 'HR Administrator', 'مسؤول الموارد البشرية',
+      null, 1, 0, null, 1, nowIso, nowIso
     );
 
     // 10. Approved Devices
