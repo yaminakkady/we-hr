@@ -1,0 +1,27 @@
+name: we_hr_mobile
+description: We HR — Enterprise Mobile Attendance Application with GPS Geofencing & OS Biometric Authentication (Android & iOS)
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
+  http: ^1.2.2
+  local_auth: ^2.3.0
+  geolocator: ^13.0.1
+  flutter_secure_storage: ^9.2.2
+  device_info_plus: ^10.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

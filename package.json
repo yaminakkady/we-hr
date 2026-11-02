@@ -1,0 +1,17 @@
+{
+  "name": "we-hr-platform",
+  "version": "1.0.0",
+  "description": "We HR — Multi-Tenant Enterprise HR SaaS Platform with GPS Geofencing, Mobile Biometric Authentication & Attendance Management for Egypt, Saudi Arabia & the Gulf",
+  "private": true,
+  "scripts": {
+    "start": "node backend/src/server.js",
+    "dev": "node --watch backend/src/server.js",
+    "seed": "node backend/src/seed_cli.js",
+    "test": "node --test backend/tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "author": "We HR Engineering Team",
+  "license": "UNLICENSED"
+}

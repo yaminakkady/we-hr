@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>We HR</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>we_hr_mobile</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<!-- Required iOS Usage Descriptions for LocalAuthentication (Face ID) & CoreLocation -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>We HR uses Face ID / Touch ID locally on your device to verify your attendance check-in and check-out. No biometric templates ever leave your phone. / يستخدم تطبيق We HR بصمة الوجه أو الإصبع محلياً لتأكيد حضورك وانصرافك دون تخزين أو إرسال أي بيانات حيوية.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We HR requires your current GPS location only while recording attendance to verify that you are within your authorized workplace geofence. / يحتاج تطبيق We HR إلى موقعك الجغرافي الحالي عند تسجيل الحضور فقط للتحقق من وجودك داخل نطاق موقع العمل المعتمد.</string>
+</dict>
+</plist>

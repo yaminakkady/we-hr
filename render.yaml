@@ -1,0 +1,29 @@
+# Render Blueprint — deploys the We HR backend API + web dashboard.
+# Render dashboard → New → Blueprint → pick this repository → Apply.
+#
+# Free plan notes: the service sleeps after 15 minutes without traffic (first request
+# then takes up to ~1 minute), and the SQLite file is NOT persistent — every restart
+# or deploy starts again from the seeded demo data. For a real pilot, switch to
+# `plan: starter` and add a persistent disk mounted at /var/data.
+services:
+  - type: web
+    name: we-hr-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: TRUST_PROXY
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SQLITE_DB_PATH
+        value: ./data/we_hr.db
