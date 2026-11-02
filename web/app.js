@@ -925,6 +925,12 @@
       showAlert(data.message || 'Sign in failed', 'danger');
       return;
     }
+    // Platform admins manage everything from the separate admin console
+    if (data.user.role === 'platform_super_admin') {
+      localStorage.setItem('wehr_admin_token', data.token);
+      window.location.href = '/admin';
+      return;
+    }
     state.token = data.token;
     localStorage.setItem('wehr_token', data.token);
     enterAuthenticatedWorkspace(data);

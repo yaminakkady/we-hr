@@ -13,6 +13,7 @@ const { createDatabase } = require('./db/database');
 const { seedDatabase } = require('./db/seed');
 const { verifyJwt } = require('./security/auth');
 const { HrService } = require('./services/hr_service');
+const { AdminService, routeAdminRequest } = require('./services/admin_service');
 const { ROLES } = require('./domain/rbac');
 
 const MIME_TYPES = {
@@ -76,6 +77,7 @@ function createAppServer(customDb) {
   const db = customDb || createDatabase();
   seedDatabase(db);
   const service = new HrService(db);
+  const adminService = new AdminService(db, service);
 
   // Simple in-memory IP rate limiter
   const rateBuckets = new Map();
@@ -157,7 +159,7 @@ function createAppServer(customDb) {
             FROM users u
             LEFT JOIN companies c ON c.id = u.company_id
             LEFT JOIN employees e ON e.user_id = u.id
-            WHERE u.is_active = 1
+            WHERE u.is_active = 1 AND u.role != 'platform_super_admin'
             ORDER BY u.company_id NULLS LAST, u.role ASC
           `)
           .all();
@@ -405,13 +407,27 @@ function createAppServer(customDb) {
           return sendJson(res, 200, { ok: true, auditLogs: logs });
         }
 
+        // Platform Admin Control Panel (platform_super_admin only)
+        if (pathname.startsWith('/api/admin/')) {
+          const body = method === 'POST' ? await readJsonBody(req) : {};
+          const result = routeAdminRequest(adminService, {
+            method,
+            pathname,
+            searchParams: parsedUrl.searchParams,
+            body,
+            actor,
+            ip,
+          });
+          if (result) return sendJson(res, result.status, result);
+        }
+
         return sendJson(res, 404, { ok: false, code: 'ENDPOINT_NOT_FOUND', message: `Unknown API route: ${method} ${pathname}` });
       }
 
       // ----------------------------------------------------------------------
       // STATIC WEB DASHBOARD & MOBILE SIMULATOR SERVING
       // ----------------------------------------------------------------------
-      let relativePath = pathname === '/' ? '/index.html' : pathname;
+      let relativePath = pathname === '/' ? '/index.html' : pathname === '/admin' || pathname === '/admin/' ? '/admin.html' : pathname;
       const safePath = path.normalize(relativePath).replace(/^(\.\.(\/|\\|$))+/, '');
       const fullPath = path.join(webRoot, safePath);
 

@@ -1,0 +1,218 @@
+/* We HR — Admin Console additions on top of styles.css */
+
+.muted {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.btn-block {
+  width: 100%;
+  justify-content: center;
+}
+
+.login-card {
+  max-width: 420px;
+  margin: 2.5rem auto;
+}
+
+.admin-layout {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.admin-nav {
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem;
+  box-shadow: var(--shadow);
+}
+
+.admin-nav button {
+  background: transparent;
+  border: none;
+  text-align: start;
+  padding: 0.6rem 0.8rem;
+  border-radius: 7px;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-nav button:hover {
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+.admin-nav button[aria-current='page'] {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.nav-count {
+  font-size: 0.72rem;
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  border-radius: 999px;
+  padding: 0 0.45rem;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.toolbar .form-control {
+  min-width: 150px;
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.btn-ghost {
+  background: var(--surface);
+  color: var(--primary);
+  border-color: var(--border);
+}
+
+.btn-ghost:hover {
+  border-color: var(--primary);
+}
+
+.btn-ghost.danger {
+  color: var(--danger-text);
+}
+
+.btn-ghost.danger:hover {
+  border-color: var(--danger-text);
+}
+
+td .sub {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+td.num,
+th.num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.mono {
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 0.8rem;
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 1.5rem;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.25rem;
+}
+
+.list-plain {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.list-plain li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+
+.list-plain li:last-child {
+  border-bottom: none;
+}
+
+.admin-dialog {
+  border: none;
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  width: min(560px, calc(100vw - 32px));
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.3);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.admin-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.admin-dialog h3 {
+  margin: 0 0 1rem;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  margin-bottom: 0.6rem;
+}
+
+#toast {
+  position: fixed;
+  inset-inline-end: 1rem;
+  bottom: 1rem;
+  z-index: 50;
+  max-width: min(420px, calc(100vw - 32px));
+  box-shadow: var(--shadow);
+}
+
+@media (max-width: 860px) {
+  .admin-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-nav {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-nav button {
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+
+  .container {
+    padding: 0 16px;
+  }
+}

@@ -35,6 +35,8 @@
 - [x] Code hosted in private GitHub repo `yaminakkady/we-hr`.
 - [x] Backend + web dashboard live at https://we-hr.onrender.com (Render free web service, Frankfurt; `NODE_ENV=production`, `HOST=0.0.0.0`, `TRUST_PROXY=true`, Render-generated `JWT_SECRET`). Free plan: sleeps after 15 min idle, SQLite resets to demo data on every restart/deploy.
 - [x] APK rebuilt against the HTTPS server (`--dart-define=WE_HR_API_URL=https://we-hr.onrender.com`, cleartext disabled).
+- [x] Platform Admin Console at `/admin` (`web/admin.*`, `backend/src/services/admin_service.js`, `/api/admin/*`): companies & subscriptions, login accounts & roles (create, change role/branch, reset password, enable/disable, force sign-out), branches, workplaces (with "use my location"), shifts, devices, payments, audit log. Platform-admin only; self-lockout and last-admin guards; every change audited; covered by `backend/tests/admin_api.test.js`.
+- [x] Owner platform admins `ezz` / `nakkady` (seed password from `SEED_ADMIN_PASSWORD`, default `123456`); platform admins hidden from the public demo-accounts list.
 - [ ] **Requires Owner**: Install the APK on a physical Android phone and test check-in/out.
 - [ ] Production: release signing keystore, persistent database (paid plan + disk or Supabase), remove demo accounts/password hint before real company data.
 - [ ] **Requires Legal Review Before Commercial Launch**: Verify company-specific employee consent notices under Egyptian Personal Data Protection Law (Law No. 151 of 2020) and Saudi PDPL / MHRSD regulations.

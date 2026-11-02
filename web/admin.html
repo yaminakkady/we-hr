@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>We HR Admin Console</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/admin.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-wrap">
+      <div class="brand-logo">We</div>
+      <div>
+        <h1 class="brand-title" data-i18n="appTitle"></h1>
+        <p class="brand-subtitle" data-i18n="appTagline"></p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <span id="admin-user-badge" class="badge badge-info hidden"></span>
+      <a class="btn btn-outline" href="/" data-i18n="hrDashboardLink"></a>
+      <button type="button" class="btn btn-outline" id="btn-lang"></button>
+      <button type="button" class="btn btn-outline hidden" id="btn-logout" data-i18n="signOut"></button>
+    </div>
+  </header>
+
+  <main class="container">
+    <div id="toast" class="alert hidden" role="status" aria-live="polite"></div>
+
+    <!-- LOGIN -->
+    <section id="view-login" class="login-card card">
+      <h2 data-i18n="loginTitle"></h2>
+      <p class="muted" data-i18n="loginHint"></p>
+      <form id="form-login">
+        <div class="form-group">
+          <label for="login-user" data-i18n="username"></label>
+          <input id="login-user" class="form-control" autocomplete="username" autocapitalize="none" spellcheck="false" required />
+        </div>
+        <div class="form-group">
+          <label for="login-pass" data-i18n="password"></label>
+          <input id="login-pass" type="password" class="form-control" autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" data-i18n="signIn"></button>
+      </form>
+    </section>
+
+    <!-- CONSOLE -->
+    <section id="view-console" class="admin-layout hidden">
+      <nav class="admin-nav" id="admin-nav" aria-label="Admin sections">
+        <button type="button" data-section="overview"></button>
+        <button type="button" data-section="companies"></button>
+        <button type="button" data-section="users"></button>
+        <button type="button" data-section="branches"></button>
+        <button type="button" data-section="workplaces"></button>
+        <button type="button" data-section="shifts"></button>
+        <button type="button" data-section="devices"></button>
+        <button type="button" data-section="payments"></button>
+        <button type="button" data-section="audit"></button>
+      </nav>
+      <div class="admin-main" id="admin-main"></div>
+    </section>
+  </main>
+
+  <dialog id="dialog" class="admin-dialog">
+    <form method="dialog" id="dialog-form">
+      <h3 id="dialog-title"></h3>
+      <div id="dialog-body"></div>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" id="dialog-cancel" data-i18n="cancel"></button>
+        <button type="submit" class="btn btn-primary" id="dialog-submit" data-i18n="save"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/admin.js"></script>
+</body>
+</html>

@@ -28,3 +28,5 @@ mobile_flutter/android/local.properties
 .DS_Store
 Thumbs.db
 .vscode/settings.json
+data/preview/
+.claude/
