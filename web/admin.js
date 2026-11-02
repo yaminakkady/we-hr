@@ -354,6 +354,8 @@
   };
 
   const $ = (id) => document.getElementById(id);
+  // Set when the console runs inside the We HR mobile app (JavaScript channel injected by the app)
+  const nativeBridge = window.WeHrNative && typeof window.WeHrNative.postMessage === 'function' ? window.WeHrNative : null;
   const t = (key) => (I18N[state.lang] && I18N[state.lang][key]) || I18N.en[key] || key;
   const esc = (v) =>
     String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -657,7 +659,7 @@
           <td><strong>${esc(nameOf(w))}</strong><span class="sub">${esc(t('wp_' + w.workplace_type))} · <span class="mono">${esc(w.code)}</span></span></td>
           <td>${esc(companyName(w))}<span class="sub">${esc(branchName(w))}</span></td>
           <td class="mono">${esc(Number(w.latitude).toFixed(5))}, ${esc(Number(w.longitude).toFixed(5))}
-            <a class="sub" href="https://www.google.com/maps?q=${encodeURIComponent(`${w.latitude},${w.longitude}`)}" target="_blank" rel="noopener noreferrer">${esc(t('openMap'))} ↗</a></td>
+            <a class="sub map-link" href="https://www.google.com/maps?q=${encodeURIComponent(`${w.latitude},${w.longitude}`)}" target="_blank" rel="noopener noreferrer">${esc(t('openMap'))} ↗</a></td>
           <td class="num">${esc(Math.round(w.radius_meters))}</td>
           <td>${activeBadge(w.is_active)}</td>
           <td><div class="row-actions">${btn(t('edit'), 'wp-edit', w.id)}${
@@ -769,17 +771,25 @@
     if (!button) return;
     button.onclick = () => {
       const hint = form.querySelector('#fld-latitude-hint');
+      const fill = (lat, lng, acc) => {
+        form.querySelector('[name="latitude"]').value = lat.toFixed(6);
+        form.querySelector('[name="longitude"]').value = lng.toFixed(6);
+        hint.textContent = `± ${Math.round(acc)} m`;
+      };
+      if (nativeBridge) {
+        hint.textContent = t('locating');
+        window.weHrNativeLocation = (res) =>
+          res.error ? (hint.textContent = t('locationFailed') + res.error) : fill(res.latitude, res.longitude, res.accuracy);
+        nativeBridge.postMessage('locate');
+        return;
+      }
       if (!navigator.geolocation) {
         hint.textContent = t('locationFailed') + 'unsupported';
         return;
       }
       hint.textContent = t('locating');
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          form.querySelector('[name="latitude"]').value = pos.coords.latitude.toFixed(6);
-          form.querySelector('[name="longitude"]').value = pos.coords.longitude.toFixed(6);
-          hint.textContent = `± ${Math.round(pos.coords.accuracy)} m`;
-        },
+        (pos) => fill(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy),
         (err) => (hint.textContent = t('locationFailed') + err.message),
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );
@@ -1041,6 +1051,7 @@
     $('view-login').classList.remove('hidden');
     $('btn-logout').classList.add('hidden');
     $('admin-user-badge').classList.add('hidden');
+    if (nativeBridge) nativeBridge.postMessage('signout');
   }
 
   async function restoreSession() {
@@ -1084,5 +1095,19 @@
   window.addEventListener('hashchange', () => state.user && location.hash.slice(1) !== state.section && showSection(location.hash.slice(1)));
 
   applyLanguage();
-  restoreSession();
+  if (nativeBridge) {
+    // The app signs the admin in natively, then hands over its session.
+    document.body.classList.add('in-app');
+    $('view-login').classList.add('hidden');
+    window.weHrAdminSignIn = (token, lang) => {
+      state.token = token;
+      storageSet('wehr_admin_token', token);
+      if (lang === 'ar' || lang === 'en') state.lang = lang;
+      applyLanguage();
+      return restoreSession();
+    };
+    nativeBridge.postMessage('ready');
+  } else {
+    restoreSession();
+  }
 })();

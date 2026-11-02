@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:geolocator/geolocator.dart';
 import 'l10n/app_strings.dart';
+import 'screens/admin_console_screen.dart';
 import 'services/biometric_auth_service.dart';
 import 'services/location_geofence_service.dart';
 import 'services/offline_attendance_queue.dart';
@@ -83,6 +84,7 @@ class _AttendanceHomePageState extends State<AttendanceHomePage> {
   final _passwordCtrl = TextEditingController(text: 'WeHR@2026');
 
   bool _isAuthenticated = false;
+  String? _adminToken;
   bool _isBusy = false;
   String? _statusBanner;
   Map<String, dynamic>? _employeeContext;
@@ -98,7 +100,11 @@ class _AttendanceHomePageState extends State<AttendanceHomePage> {
     });
     try {
       final res = await _api.login(_emailCtrl.text.trim(), _passwordCtrl.text);
-      if (res['ok'] == true) {
+      final role = (res['user'] as Map<String, dynamic>?)?['role'];
+      if (res['ok'] == true && role == 'platform_super_admin') {
+        // Platform admins get the same Admin Console as the web, inside the app.
+        setState(() => _adminToken = _api.accessToken);
+      } else if (res['ok'] == true) {
         final ctx = await _api.fetchEmployeeContext();
         setState(() {
           _isAuthenticated = true;
@@ -229,8 +235,28 @@ class _AttendanceHomePageState extends State<AttendanceHomePage> {
     }
   }
 
+  void _signOutAdmin() {
+    _api.setAccessToken(null);
+    setState(() {
+      _adminToken = null;
+      _passwordCtrl.clear();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_adminToken != null) {
+      return Scaffold(
+        body: SafeArea(
+          child: AdminConsoleScreen(
+            baseUrl: _api.baseUrl,
+            token: _adminToken!,
+            localeCode: widget.localeCode,
+            onSignOut: _signOutAdmin,
+          ),
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(_tr('appTitle')),

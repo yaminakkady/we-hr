@@ -3,8 +3,8 @@ class AppStrings {
   static const Map<String, Map<String, String>> values = {
     'ar': {
       'appTitle': 'We HR | الحضور الذكي للموظفين',
-      'loginTitle': 'تسجيل الدخول إلى حساب الموظف',
-      'email': 'البريد الإلكتروني',
+      'loginTitle': 'تسجيل الدخول',
+      'email': 'البريد الإلكتروني أو اسم المستخدم',
       'password': 'كلمة المرور',
       'signIn': 'تسجيل الدخول',
       'nearestWorkplace': 'أقرب موقع عمل معتمد',
@@ -23,8 +23,8 @@ class AppStrings {
     },
     'en': {
       'appTitle': 'We HR | Smart Employee Attendance',
-      'loginTitle': 'Employee Account Sign In',
-      'email': 'Work Email',
+      'loginTitle': 'Sign In',
+      'email': 'Email or username',
       'password': 'Password',
       'signIn': 'Sign In',
       'nearestWorkplace': 'Nearest Authorized Workplace',

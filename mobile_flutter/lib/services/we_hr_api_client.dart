@@ -12,6 +12,8 @@ class WeHrApiClient {
     _accessToken = token;
   }
 
+  String? get accessToken => _accessToken;
+
   Map<String, String> _headers() {
     return {
       'Content-Type': 'application/json; charset=utf-8',

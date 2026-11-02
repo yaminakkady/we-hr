@@ -216,3 +216,13 @@ th.num {
     padding: 0 16px;
   }
 }
+
+/* Inside the mobile app: the app owns navigation, so hide links that would leave the console */
+body.in-app [data-i18n='hrDashboardLink'],
+body.in-app .map-link {
+  display: none;
+}
+
+body.in-app .topbar {
+  padding: 0.6rem 16px;
+}
