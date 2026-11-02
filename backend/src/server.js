@@ -458,8 +458,18 @@ if (require.main === module) {
   const port = Number(process.env.PORT || 3000);
   const host = process.env.HOST || '127.0.0.1';
   if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-    console.error('Refusing to start: JWT_SECRET must be set when NODE_ENV=production.');
-    process.exit(1);
+    // Never fall back to the built-in development secret in production: generate a random
+    // one once and keep it next to the database so sessions survive ordinary restarts.
+    const secretFile = path.join(
+      path.dirname(process.env.SQLITE_DB_PATH || path.join(__dirname, '..', '..', 'data', 'we_hr.db')),
+      '.jwt_secret'
+    );
+    fs.mkdirSync(path.dirname(secretFile), { recursive: true });
+    if (!fs.existsSync(secretFile)) {
+      fs.writeFileSync(secretFile, require('node:crypto').randomBytes(48).toString('hex'), { mode: 0o600 });
+      console.log('Generated a new random JWT secret (JWT_SECRET was not set).');
+    }
+    process.env.JWT_SECRET = fs.readFileSync(secretFile, 'utf8').trim();
   }
   const { server } = createAppServer();
   server.listen(port, host, () => {

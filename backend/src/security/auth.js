@@ -7,7 +7,8 @@
 
 const crypto = require('node:crypto');
 
-const DEFAULT_SECRET =
+// Read on every call (not at module load) so the server can supply a generated secret at startup.
+const defaultSecret = () =>
   process.env.JWT_SECRET || 'we-hr-local-dev-secret-change-in-production-9f8e7d6c5b4a3210';
 const DEFAULT_EXPIRES_IN_SEC = Number(process.env.JWT_EXPIRES_IN_SECONDS || 28800); // 8 hours
 
@@ -85,7 +86,7 @@ function base64UrlDecode(str) {
  * @returns {string}
  */
 function signJwt(payload, options = {}) {
-  const secret = options.secret || DEFAULT_SECRET;
+  const secret = options.secret || defaultSecret();
   const nowSec = options.nowSeconds ?? Math.floor(Date.now() / 1000);
   const expiresIn = options.expiresInSeconds ?? DEFAULT_EXPIRES_IN_SEC;
 
@@ -124,7 +125,7 @@ function verifyJwt(token, options = {}) {
     return { valid: false, reason: 'MALFORMED_TOKEN' };
   }
 
-  const secret = options.secret || DEFAULT_SECRET;
+  const secret = options.secret || defaultSecret();
   const nowSec = options.nowSeconds ?? Math.floor(Date.now() / 1000);
   const [encodedHeader, encodedPayload, encodedSig] = parts;
   const signingInput = `${encodedHeader}.${encodedPayload}`;
