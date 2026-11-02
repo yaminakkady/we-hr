@@ -32,6 +32,9 @@
 - [x] Implement and run 12 automated unit, integration, and HTTP E2E test suites (`npm test` — 12/12 passing).
 - [x] Install Flutter 3.47.9, OpenJDK 17 and Android SDK (platform 36, build-tools 36, NDK 28.2) and complete the Android/iOS project scaffolding (`flutter create`, package `cloud.wehr.mobile`).
 - [x] Build pilot release APK (`mobile_flutter/build/app/outputs/flutter-apk/app-release.apk`, 49.3 MB) — `flutter analyze` clean, `flutter test` passing. Built with `--dart-define=WE_HR_API_URL=http://192.168.1.7:3000 -P weHrAllowCleartext=true` (plain HTTP to the laptop backend; signed with the debug key).
-- [ ] **Requires Owner**: Install the pilot APK on a physical Android phone and test check-in/out against the laptop backend (`$env:HOST="0.0.0.0"; npm start`, same Wi-Fi network).
-- [ ] Production Android build: release signing keystore, HTTPS backend URL, cleartext left disabled (default).
+- [x] Code hosted in private GitHub repo `yaminakkady/we-hr`.
+- [x] Backend + web dashboard live at https://we-hr.onrender.com (Render free web service, Frankfurt; `NODE_ENV=production`, `HOST=0.0.0.0`, `TRUST_PROXY=true`, Render-generated `JWT_SECRET`). Free plan: sleeps after 15 min idle, SQLite resets to demo data on every restart/deploy.
+- [x] APK rebuilt against the HTTPS server (`--dart-define=WE_HR_API_URL=https://we-hr.onrender.com`, cleartext disabled).
+- [ ] **Requires Owner**: Install the APK on a physical Android phone and test check-in/out.
+- [ ] Production: release signing keystore, persistent database (paid plan + disk or Supabase), remove demo accounts/password hint before real company data.
 - [ ] **Requires Legal Review Before Commercial Launch**: Verify company-specific employee consent notices under Egyptian Personal Data Protection Law (Law No. 151 of 2020) and Saudi PDPL / MHRSD regulations.
