@@ -427,7 +427,9 @@ function createAppServer(customDb) {
       // ----------------------------------------------------------------------
       // STATIC WEB DASHBOARD & MOBILE SIMULATOR SERVING
       // ----------------------------------------------------------------------
-      let relativePath = pathname === '/' ? '/index.html' : pathname === '/admin' || pathname === '/admin/' ? '/admin.html' : pathname;
+      // Friendly routes: unified sign-in + attendance (web & mobile app), HR dashboard, admin console
+      const PAGE_ROUTES = { '/': '/home.html', '/hr': '/index.html', '/hr/': '/index.html', '/admin': '/admin.html', '/admin/': '/admin.html' };
+      let relativePath = PAGE_ROUTES[pathname] || pathname;
       const safePath = path.normalize(relativePath).replace(/^(\.\.(\/|\\|$))+/, '');
       const fullPath = path.join(webRoot, safePath);
 
@@ -443,8 +445,8 @@ function createAppServer(customDb) {
         return;
       }
 
-      // Fallback to index.html for SPA navigation
-      const indexFile = path.join(webRoot, 'index.html');
+      // Unknown paths fall back to the unified sign-in page
+      const indexFile = path.join(webRoot, 'home.html');
       if (fs.existsSync(indexFile)) {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         res.end(fs.readFileSync(indexFile));

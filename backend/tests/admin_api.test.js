@@ -37,6 +37,10 @@ test('Admin 1: Panel access is limited to platform super admins; admin page is s
     const page = await fetch(`${baseUrl}/admin`);
     assert.equal(page.status, 200);
     assert.ok((await page.text()).includes('admin.js'));
+    // Unified sign-in + attendance page at "/", HR dashboard at "/hr"
+    assert.ok((await (await fetch(`${baseUrl}/`)).text()).includes('home.js'));
+    assert.ok((await (await fetch(`${baseUrl}/hr`)).text()).includes('/app.js'));
+    assert.ok((await (await fetch(`${baseUrl}/some/unknown/page`)).text()).includes('home.js'));
 
     assert.equal((await call('GET', '/api/admin/overview')).status, 401);
 

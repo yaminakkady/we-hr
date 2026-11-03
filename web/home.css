@@ -1,0 +1,116 @@
+/* We HR — unified sign-in + employee attendance screen (web and mobile app) */
+
+.app-shell {
+  max-width: 520px;
+  margin: 1.25rem auto 2.5rem;
+  padding: 0 16px;
+}
+
+.app-bar {
+  padding-top: max(0.85rem, env(safe-area-inset-top));
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.btn-block {
+  width: 100%;
+  justify-content: center;
+}
+
+.btn-lg {
+  padding: 0.85rem 1rem;
+  font-size: 1rem;
+  justify-content: center;
+}
+
+.btn-ghost {
+  background: var(--surface);
+  color: var(--primary);
+  border-color: var(--border);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.profile-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.profile-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0.75rem 0;
+  font-size: 0.92rem;
+}
+
+.facts dt {
+  color: var(--text-muted);
+}
+
+.facts dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+#loc-fence {
+  display: block;
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+
+#loc-fence.hidden {
+  display: none;
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.list-plain {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.list-plain li {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+
+.list-plain li:last-child {
+  border-bottom: none;
+}
+
+.list-plain .why {
+  display: block;
+  color: var(--danger-text);
+  font-size: 0.8rem;
+}
+
+.empty {
+  color: var(--text-muted);
+  justify-content: center;
+}

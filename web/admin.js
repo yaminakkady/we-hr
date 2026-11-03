@@ -342,7 +342,7 @@
   }
 
   const state = {
-    lang: storageGet('wehr_admin_lang') || 'ar',
+    lang: storageGet('wehr_lang') || 'ar',
     token: storageGet('wehr_admin_token'),
     user: null,
     section: 'overview',
@@ -354,8 +354,8 @@
   };
 
   const $ = (id) => document.getElementById(id);
-  // Set when the console runs inside the We HR mobile app (JavaScript channel injected by the app)
-  const nativeBridge = window.WeHrNative && typeof window.WeHrNative.postMessage === 'function' ? window.WeHrNative : null;
+  // Native phone features when the console runs inside the We HR mobile app (see native-bridge.js)
+  const bridge = window.WeHrBridge || { available: false };
   const t = (key) => (I18N[state.lang] && I18N[state.lang][key]) || I18N.en[key] || key;
   const esc = (v) =>
     String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -776,11 +776,11 @@
         form.querySelector('[name="longitude"]').value = lng.toFixed(6);
         hint.textContent = `± ${Math.round(acc)} m`;
       };
-      if (nativeBridge) {
+      if (bridge.available) {
         hint.textContent = t('locating');
-        window.weHrNativeLocation = (res) =>
-          res.error ? (hint.textContent = t('locationFailed') + res.error) : fill(res.latitude, res.longitude, res.accuracy);
-        nativeBridge.postMessage('locate');
+        bridge
+          .call('locate')
+          .then((res) => (res.error ? (hint.textContent = t('locationFailed') + res.error) : fill(res.latitude, res.longitude, res.accuracy)));
         return;
       }
       if (!navigator.geolocation) {
@@ -1047,11 +1047,13 @@
     state.token = null;
     state.user = null;
     storageSet('wehr_admin_token', null);
+    storageSet('wehr_home_token', null);
     $('view-console').classList.add('hidden');
     $('view-login').classList.remove('hidden');
     $('btn-logout').classList.add('hidden');
     $('admin-user-badge').classList.add('hidden');
-    if (nativeBridge) nativeBridge.postMessage('signout');
+    // In the mobile app everyone signs in on the unified start page
+    if (bridge.available) window.location.href = '/';
   }
 
   async function restoreSession() {
@@ -1080,7 +1082,7 @@
   $('btn-logout').addEventListener('click', signOut);
   $('btn-lang').addEventListener('click', () => {
     state.lang = state.lang === 'ar' ? 'en' : 'ar';
-    storageSet('wehr_admin_lang', state.lang);
+    storageSet('wehr_lang', state.lang);
     applyLanguage();
     if (state.user) render();
   });
@@ -1094,20 +1096,7 @@
   });
   window.addEventListener('hashchange', () => state.user && location.hash.slice(1) !== state.section && showSection(location.hash.slice(1)));
 
+  if (bridge.available) $('view-login').classList.add('hidden');
   applyLanguage();
-  if (nativeBridge) {
-    // The app signs the admin in natively, then hands over its session.
-    document.body.classList.add('in-app');
-    $('view-login').classList.add('hidden');
-    window.weHrAdminSignIn = (token, lang) => {
-      state.token = token;
-      storageSet('wehr_admin_token', token);
-      if (lang === 'ar' || lang === 'en') state.lang = lang;
-      applyLanguage();
-      return restoreSession();
-    };
-    nativeBridge.postMessage('ready');
-  } else {
-    restoreSession();
-  }
+  restoreSession();
 })();
