@@ -30,3 +30,7 @@ Thumbs.db
 .vscode/settings.json
 data/preview/
 .claude/
+
+# Built APKs and website snapshots (kept locally; only the index is in git)
+releases/*
+!releases/README.md
