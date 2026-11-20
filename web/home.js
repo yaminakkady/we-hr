@@ -18,6 +18,8 @@
       signIn: 'تسجيل الدخول',
       signingIn: 'جارٍ تسجيل الدخول… قد يستغرق دقيقة إذا كان الخادم في وضع السكون',
       loading: 'جارٍ التحميل…',
+      appLoadingTitle: 'جارٍ تحميل تطبيق We HR…',
+      appLoadingSubtitle: 'يرجى الانتظار لحظات…',
       locationExplanation: 'يتم قراءة موقعك الجغرافي فقط لحظة تسجيل الحضور للتحقق من وجودك داخل مقر العمل، ولا يتم تتبعك في الخلفية.',
       nearestWorkplace: 'أقرب موقع عمل معتمد',
       distance: 'المسافة الحالية',
@@ -67,6 +69,8 @@
       signIn: 'Sign in',
       signingIn: 'Signing in… this can take up to a minute if the server is waking up',
       loading: 'Loading…',
+      appLoadingTitle: 'We HR is loading…',
+      appLoadingSubtitle: 'Please wait a moment…',
       locationExplanation: 'Your location is read only at the moment you record attendance, to confirm you are at your workplace. No background tracking.',
       nearestWorkplace: 'Nearest authorized workplace',
       distance: 'Current distance',
@@ -161,8 +165,11 @@
   }
 
   function show(viewId) {
-    ['view-login', 'view-employee', 'view-no-profile'].forEach((id) => $(id).classList.toggle('hidden', id !== viewId));
-    $('btn-logout').classList.toggle('hidden', viewId === 'view-login');
+    ['view-loading', 'view-login', 'view-employee', 'view-no-profile'].forEach((id) => {
+      const el = $(id);
+      if (el) el.classList.toggle('hidden', id !== viewId);
+    });
+    $('btn-logout').classList.toggle('hidden', viewId === 'view-login' || viewId === 'view-loading');
   }
 
   function banner(message, kind) {
@@ -203,7 +210,27 @@
     show('view-login');
   }
 
+  async function waitForServerHealth() {
+    for (let attempt = 0; attempt < 15; attempt++) {
+      try {
+        const resp = await fetch('/api/health', { headers: { Accept: 'application/json' }, cache: 'no-store' });
+        if (resp.ok) {
+          const data = await resp.json().catch(() => null);
+          if (data && data.ok) return true;
+        } else if (resp.status < 500) {
+          return false;
+        }
+      } catch {
+        // Server waking up or momentarily unreachable
+      }
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+    return false;
+  }
+
   async function restoreSession() {
+    show('view-loading');
+    await waitForServerHealth();
     if (!state.token) return show('view-login');
     const res = await api('/api/auth/me').catch(() => null);
     if (!res || !res.ok) return signOut();

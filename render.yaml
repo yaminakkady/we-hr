@@ -13,7 +13,7 @@ services:
     region: frankfurt
     buildCommand: npm install
     startCommand: npm start
-    healthCheckPath: /
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
         value: "24"
@@ -22,6 +22,8 @@ services:
       - key: HOST
         value: 0.0.0.0
       - key: TRUST_PROXY
+        value: "true"
+      - key: KEEP_ALIVE_ENABLED
         value: "true"
       - key: JWT_SECRET
         generateValue: true

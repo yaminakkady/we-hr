@@ -16,7 +16,7 @@
       </div>
     </div>
     <div class="topbar-actions">
-      <span id="ui-user-badge" class="badge badge-info hidden"></span>
+      <span id="ui-user-badge" class="badge badge-lime hidden"></span>
       <button type="button" class="btn btn-outline" id="btn-lang-toggle">English</button>
       <button type="button" class="btn btn-outline hidden" id="btn-logout">Sign Out</button>
     </div>
@@ -41,7 +41,7 @@
           <label for="login-password" id="ui-password-label"></label>
           <input type="password" id="login-password" class="form-control" value="WeHR@2026" required />
         </div>
-        <button type="submit" class="btn btn-primary" id="ui-signin-btn" style="width:100%;justify-content:center;padding:0.65rem;"></button>
+        <button type="submit" class="btn btn-primary" id="ui-signin-btn" style="width:100%;justify-content:center;padding:0.72rem;"></button>
       </form>
 
       <div style="margin-top:1.35rem;border-top:1px solid var(--border);padding-top:1rem;">
@@ -51,529 +51,782 @@
     </section>
 
     <!-- ================================================================== -->
-    <!-- AUTHENTICATED WORKSPACE                                            -->
+    <!-- AUTHENTICATED WORKSPACE (FIELDNOTE OPS CONSOLE LAYOUT)             -->
     <!-- ================================================================== -->
-    <section id="view-workspace" class="hidden">
-      <nav class="nav-tabs" id="nav-tabs">
-        <button type="button" class="nav-tab active" data-tab="overview" id="tab-btn-overview"></button>
-        <button type="button" class="nav-tab" data-tab="mobile" id="tab-btn-mobile"></button>
-        <button type="button" class="nav-tab" data-tab="attendance" id="tab-btn-attendance"></button>
-        <button type="button" class="nav-tab" data-tab="employees" id="tab-btn-employees"></button>
-        <button type="button" class="nav-tab" data-tab="workplaces" id="tab-btn-workplaces"></button>
-        <button type="button" class="nav-tab" data-tab="leaves" id="tab-btn-leaves"></button>
-        <button type="button" class="nav-tab" data-tab="devices" id="tab-btn-devices"></button>
-        <button type="button" class="nav-tab" data-tab="subscription" id="tab-btn-subscription"></button>
-      </nav>
-
-      <!-- TAB 1: OVERVIEW -->
-      <div id="tab-overview" class="tab-pane">
-        <div class="kpi-grid" id="overview-kpis"></div>
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title" id="ui-recent-events-title"></h3>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-refresh-overview">↻</button>
-          </div>
-          <div class="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th id="th-emp"></th>
-                  <th id="th-evt"></th>
-                  <th id="th-time"></th>
-                  <th id="th-wp"></th>
-                  <th id="th-dist"></th>
-                  <th id="th-bio"></th>
-                  <th id="th-status"></th>
-                  <th id="th-actions"></th>
-                </tr>
-              </thead>
-              <tbody id="tbody-recent-events"></tbody>
-            </table>
-          </div>
+    <section id="view-workspace" class="ops-window hidden">
+      <div class="ops-window-chrome">
+        <div class="window-dots" aria-hidden="true">
+          <span class="dot-r"></span>
+          <span class="dot-y"></span>
+          <span class="dot-g"></span>
+        </div>
+        <div style="font-family:ui-monospace,monospace;font-size:0.71rem;color:var(--text-muted);" id="ops-chrome-tenant">
+          WE HR · MULTI-TENANT OPS CONSOLE
         </div>
       </div>
 
-      <!-- TAB 2: EMPLOYEE MOBILE ATTENDANCE TERMINAL -->
-      <div id="tab-mobile" class="tab-pane hidden">
-        <div class="mobile-frame">
-          <div class="card-header">
-            <h3 class="card-title" id="ui-mobile-header"></h3>
-            <span id="mobile-emp-badge" class="badge badge-info"></span>
+      <div class="ops-grid">
+        <!-- 1. LEFT FLOATING DARK ICON RAIL -->
+        <aside class="ops-rail-col" aria-label="Primary rail">
+          <div class="ops-rail">
+            <button type="button" class="rail-btn active" data-rail-tab="overview" title="Overview">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+            </button>
+            <button type="button" class="rail-btn" data-rail-tab="mobile" title="Employee Attendance">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+            </button>
+            <button type="button" class="rail-btn" data-rail-tab="attendance" title="Attendance Register">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+            </button>
+            <button type="button" class="rail-btn" data-rail-tab="employees" title="Employees">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </button>
+            <button type="button" class="rail-btn" data-rail-tab="workplaces" title="Workplaces & Geofences">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+            </button>
+            <button type="button" class="rail-btn" data-rail-tab="leaves" title="Leaves">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </button>
+            <button type="button" class="rail-btn" data-rail-tab="devices" title="Devices & Audit">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </button>
+            <button type="button" class="rail-btn" data-rail-tab="subscription" title="Subscription & Billing">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            </button>
           </div>
 
-          <div id="mobile-context-summary" style="margin-bottom:1rem;font-size:0.88rem;"></div>
+          <div class="rail-timeline-strip" aria-hidden="true">
+            <span class="rail-24h-label">24H</span>
+            <div class="rail-24h-ticks" id="rail-24h-ticks">
+              <span></span><span class="major"></span><span></span><span></span><span class="major"></span>
+              <span></span><span class="alert"></span><span></span><span class="now"></span><span></span>
+              <span class="major"></span><span></span><span></span><span></span><span class="major"></span>
+              <span></span><span></span><span class="major"></span><span></span><span></span>
+            </div>
+            <div class="rail-vertical-title">WE HR · OPS CONSOLE</div>
+          </div>
 
-          <div class="step-box">
-            <h4 style="margin-top:0;" id="ui-step1-location"></h4>
-            <div class="form-grid">
-              <div class="form-group">
-                <label id="ui-scenario-label" for="mobile-loc-scenario"></label>
-                <select id="mobile-loc-scenario" class="form-control">
-                  <option value="inside" id="opt-scen-inside"></option>
-                  <option value="outside" id="opt-scen-outside"></option>
-                  <option value="poor_acc" id="opt-scen-poor"></option>
-                  <option value="stale" id="opt-scen-stale"></option>
-                  <option value="mock" id="opt-scen-mock"></option>
-                </select>
+          <div class="rail-bottom-pill">
+            <button type="button" class="rail-btn" id="btn-rail-lang" title="Switch Language / تغيير اللغة">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </button>
+          </div>
+        </aside>
+
+        <!-- 2. SECONDARY FROSTED SIDEBAR -->
+        <aside class="ops-sidebar">
+          <div class="workspace-pill">
+            <div class="workspace-mark">W</div>
+            <div style="min-width:0;">
+              <div class="workspace-name" id="sidebar-company-name">We HR</div>
+              <div class="workspace-sub" id="ui-ops-workspace-sub">Ops workspace</div>
+            </div>
+          </div>
+
+          <div class="quick-search-wrap">
+            <input type="search" id="ops-quick-search" class="quick-search-input" placeholder="Search…" autocomplete="off" />
+            <span class="quick-search-kbd">⌘K</span>
+          </div>
+
+          <div>
+            <div class="side-section-label" id="ui-side-workspace-lbl">WORKSPACE</div>
+            <nav class="nav-tabs" id="nav-tabs">
+              <button type="button" class="nav-tab active" data-tab="overview">
+                <span id="tab-btn-overview"></span>
+              </button>
+              <button type="button" class="nav-tab" data-tab="mobile">
+                <span id="tab-btn-mobile"></span>
+              </button>
+              <button type="button" class="nav-tab" data-tab="attendance">
+                <span id="tab-btn-attendance"></span>
+                <span class="badge badge-lime hidden" id="nav-badge-exceptions">0</span>
+              </button>
+              <button type="button" class="nav-tab" data-tab="employees">
+                <span id="tab-btn-employees"></span>
+                <span class="badge badge-neutral" id="nav-badge-employees">0</span>
+              </button>
+              <button type="button" class="nav-tab" data-tab="workplaces">
+                <span id="tab-btn-workplaces"></span>
+              </button>
+              <button type="button" class="nav-tab" data-tab="leaves">
+                <span id="tab-btn-leaves"></span>
+                <span class="badge badge-lime hidden" id="nav-badge-leaves">0</span>
+              </button>
+              <button type="button" class="nav-tab" data-tab="devices">
+                <span id="tab-btn-devices"></span>
+              </button>
+              <button type="button" class="nav-tab" data-tab="subscription">
+                <span id="tab-btn-subscription"></span>
+              </button>
+            </nav>
+          </div>
+
+          <div>
+            <div class="side-section-label" id="ui-side-live-lbl">LIVE</div>
+            <div class="side-live-list">
+              <div class="side-live-row">
+                <span class="side-live-label"><span class="dot dot-lime"></span><span id="ui-live-present-lbl">Present</span></span>
+                <strong id="live-present-count">0</strong>
               </div>
-              <div class="form-group">
-                <label for="mobile-workplace-select">Workplace / موقع العمل</label>
-                <select id="mobile-workplace-select" class="form-control"></select>
+              <div class="side-live-row">
+                <span class="side-live-label"><span class="dot dot-amber"></span><span id="ui-live-review-lbl">Needs review</span></span>
+                <strong id="live-late-count">0</strong>
               </div>
-            </div>
-            <div id="mobile-gps-preview" style="font-size:0.84rem;color:var(--text-muted);background:var(--surface-alt);padding:0.65rem;border-radius:6px;"></div>
-          </div>
-
-          <div class="step-box">
-            <h4 style="margin-top:0;" id="ui-step2-biometric"></h4>
-            <div class="form-grid">
-              <div class="form-group">
-                <label id="ui-biomode-label" for="mobile-bio-mode"></label>
-                <select id="mobile-bio-mode" class="form-control">
-                  <option value="biometric_strong" id="opt-bio-strong"></option>
-                  <option value="device_credential" id="opt-bio-pin"></option>
-                  <option value="exception_fallback" id="opt-bio-exc"></option>
-                  <option value="user_canceled" id="opt-bio-cancel"></option>
-                  <option value="shared_device" id="opt-bio-shared"></option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label id="ui-netmode-label" for="mobile-net-mode"></label>
-                <select id="mobile-net-mode" class="form-control">
-                  <option value="online" id="opt-net-online"></option>
-                  <option value="offline" id="opt-net-offline"></option>
-                </select>
+              <div class="side-live-row">
+                <span class="side-live-label"><span class="dot dot-coral"></span><span id="ui-live-rejected-lbl">Flagged / Rejected</span></span>
+                <strong id="live-alert-count">0</strong>
               </div>
             </div>
           </div>
 
-          <div class="step-box">
-            <h4 style="margin-top:0;" id="ui-step3-submit"></h4>
-            <div style="display:flex;gap:0.65rem;flex-wrap:wrap;">
-              <button type="button" class="btn btn-primary" data-evt="check_in" id="btn-mob-checkin"></button>
-              <button type="button" class="btn btn-secondary" data-evt="break_start" id="btn-mob-breakstart"></button>
-              <button type="button" class="btn btn-secondary" data-evt="break_end" id="btn-mob-breakend"></button>
-              <button type="button" class="btn btn-accent" data-evt="check_out" id="btn-mob-checkout"></button>
-              <button type="button" class="btn btn-secondary" id="btn-mob-sync-offline"></button>
-            </div>
-            <div id="offline-queue-box" style="margin-top:0.85rem;font-size:0.84rem;"></div>
-            <div id="mobile-tx-result" style="margin-top:0.85rem;"></div>
+          <div>
+            <div class="side-section-label" id="ui-side-branches-lbl">BRANCHES</div>
+            <div class="side-branch-list" id="sidebar-branches-tree"></div>
           </div>
-        </div>
-      </div>
 
-      <!-- TAB 3: ATTENDANCE REGISTER & MANUAL CORRECTIONS -->
-      <div id="tab-attendance" class="tab-pane hidden">
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Daily Attendance Register / سجل الحضور اليومي</h3>
-            <div style="display:flex;gap:0.5rem;align-items:center;">
-              <input type="date" id="filter-att-date" class="form-control" style="width:auto;" />
-              <button type="button" class="btn btn-accent btn-sm" id="btn-export-csv"></button>
+          <div class="sidebar-user-card" id="sidebar-user-card">
+            <div class="user-avatar-circle" id="sidebar-user-initials">HR</div>
+            <div style="min-width:0;flex:1;">
+              <div style="font-weight:700;font-size:0.81rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="sidebar-user-name">—</div>
+              <div style="font-size:0.71rem;color:var(--text-muted);" id="sidebar-user-role">—</div>
             </div>
           </div>
-          <div class="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date / التاريخ</th>
-                  <th>Employee / الموظف</th>
-                  <th>Branch / الفرع</th>
-                  <th>Check-In / الحضور</th>
-                  <th>Check-Out / الانصراف</th>
-                  <th>State / الحالة</th>
-                  <th>Late (m) / تأخير</th>
-                  <th>Overtime (m) / إضافي</th>
-                  <th>Status / التقييم</th>
-                  <th>Notes / ملاحظات</th>
-                </tr>
-              </thead>
-              <tbody id="tbody-attendance-register"></tbody>
-            </table>
-          </div>
-        </div>
+        </aside>
 
-        <div class="card" id="card-manual-correction">
-          <div class="card-header">
-            <h3 class="card-title" id="ui-manual-corr-title"></h3>
-          </div>
-          <form id="form-manual-correction" class="form-grid">
-            <div class="form-group">
-              <label>Employee / الموظف</label>
-              <select id="corr-employee-id" class="form-control" required></select>
-            </div>
-            <div class="form-group">
-              <label>Date / التاريخ</label>
-              <input type="date" id="corr-date" class="form-control" required />
-            </div>
-            <div class="form-group">
-              <label>Correction Type / نوع التصحيح</label>
-              <select id="corr-type" class="form-control">
-                <option value="excuse_late_arrival">Excuse Late Arrival / إعفاء تأخير</option>
-                <option value="missing_check_in">Missing Check-In / نسيان بصمة حضور</option>
-                <option value="missing_check_out">Missing Check-Out / نسيان بصمة انصراف</option>
-                <option value="time_adjustment">Time Adjustment / تعديل توقيت</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>New Status / الحالة بعد التصحيح</label>
-              <select id="corr-status" class="form-control">
-                <option value="present">Present / حاضر</option>
-                <option value="late">Late / متأخر</option>
-              </select>
-            </div>
-            <div class="form-group" style="grid-column: 1 / -1;">
-              <label>Mandatory Audit Reason / سبب التصحيح الإداري (إلزامي لسجل المراجعة)</label>
-              <input type="text" id="corr-reason" class="form-control" placeholder="e.g. Official client meeting approved by department head" required />
-            </div>
+        <!-- 3. MAIN WORKSPACE CONTENT -->
+        <div class="ops-main">
+          <div class="ops-main-header">
             <div>
-              <button type="submit" class="btn btn-primary">Save Audited Correction / حفظ التصحيح الموثق</button>
+              <div class="ops-breadcrumb" id="ops-breadcrumb">WE HR / OVERVIEW</div>
+              <h2 class="ops-page-title" id="ops-page-title">Overview</h2>
+              <div class="ops-page-subtitle" id="ops-live-datetime"></div>
             </div>
-          </form>
-          <div class="table-responsive" style="margin-top:1rem;">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Employee</th>
-                  <th>Type</th>
-                  <th>Original Value</th>
-                  <th>Corrected Value</th>
-                  <th>Reason</th>
-                  <th>Approver</th>
-                </tr>
-              </thead>
-              <tbody id="tbody-corrections"></tbody>
-            </table>
+            <div class="ops-header-controls">
+              <div class="segmented-pill" id="ops-range-switcher" role="group" aria-label="Timeframe">
+                <button type="button" class="active" data-range="today" id="btn-range-today">Today</button>
+                <button type="button" data-range="7d" id="btn-range-7d">7 days</button>
+                <button type="button" data-range="30d" id="btn-range-30d">30 days</button>
+              </div>
+              <button type="button" class="icon-circle-btn" id="btn-header-bell" title="Pending decisions">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                <span class="notif-dot hidden" id="header-bell-dot"></span>
+              </button>
+              <button type="button" class="btn btn-primary" id="btn-header-record-attendance">+ Record Attendance</button>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <!-- TAB 4: EMPLOYEES MANAGEMENT & CSV IMPORT -->
-      <div id="tab-employees" class="tab-pane hidden">
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Employees Directory / دليل الموظفين</h3>
-          </div>
-          <div class="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Name (AR / EN)</th>
-                  <th>Job Title</th>
-                  <th>Branch</th>
-                  <th>Workplace</th>
-                  <th>Biometric Policy</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="tbody-employees"></tbody>
-            </table>
-          </div>
-        </div>
+          <!-- TAB 1: OVERVIEW (DECISION-FIRST COMMAND CENTER) -->
+          <div id="tab-overview" class="tab-pane">
+            <!-- Hero Card: Attendance Activity + 3-Mode Chart + Action Insight Bar -->
+            <div class="hero-card" style="margin-bottom:0.95rem;">
+              <div class="hero-top-bar">
+                <div class="hero-title-legend">
+                  <h3 class="card-title" id="ui-hero-title">Attendance punches today</h3>
+                  <div class="hero-legend-items">
+                    <span class="hero-legend-item"><span class="dot dot-dark"></span> <span id="ui-leg-verified">VERIFIED</span></span>
+                    <span class="hero-legend-item"><span style="width:8px;height:8px;border-radius:50%;border:1.5px solid #9ca3af;display:inline-block;"></span> <span id="ui-leg-scheduled">SCHEDULED</span></span>
+                    <span class="hero-legend-item"><span class="dot dot-coral"></span> <span id="ui-leg-flagged">FLAGGED</span></span>
+                    <span class="hero-legend-item"><span class="dot dot-amber"></span> <span id="ui-leg-review">REVIEW</span></span>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.55rem;flex-wrap:wrap;">
+                  <div class="chart-mode-switcher" role="group" aria-label="Chart visualization mode">
+                    <button type="button" class="chart-mode-btn active" data-chart-mode="dots" title="Dot Matrix">
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="12" r="1.5"/><circle cx="7" cy="12" r="1.5"/><circle cx="7" cy="8" r="1.5"/><circle cx="11" cy="12" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="11" cy="4" r="1.5"/></svg>
+                    </button>
+                    <button type="button" class="chart-mode-btn" data-chart-mode="waves" title="Workplace Ridgelines">
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 12c2.5 0 3.5-5 5.5-5s3 5 5 5 2.5-3 3.5-3"/><path d="M1 7c2.5 0 3-4 5-4s3 4 5 4 2-2 4-2"/></svg>
+                    </button>
+                    <button type="button" class="chart-mode-btn" data-chart-mode="bars" title="Isometric Volume Bars">
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="9" width="3" height="5" rx="0.8"/><rect x="6.5" y="5" width="3" height="9" rx="0.8"/><rect x="11" y="2" width="3" height="12" rx="0.8"/></svg>
+                    </button>
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-hero-open-register-top">Open register →</button>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-refresh-overview" title="Refresh">↻</button>
+                </div>
+              </div>
 
-        <div class="card" id="card-add-employee">
-          <div class="card-header">
-            <h3 class="card-title" id="ui-add-emp-title"></h3>
-          </div>
-          <form id="form-add-employee" class="form-grid">
-            <div class="form-group">
-              <label>Employee Code / الرقم الوظيفي</label>
-              <input type="text" id="emp-code" class="form-control" placeholder="ND-105" required />
-            </div>
-            <div class="form-group">
-              <label>Work Email / البريد الإلكتروني</label>
-              <input type="email" id="emp-email" class="form-control" placeholder="mona.ali@niledelta.eg" required />
-            </div>
-            <div class="form-group">
-              <label>Full Name (English)</label>
-              <input type="text" id="emp-name-en" class="form-control" placeholder="Mona Ali" required />
-            </div>
-            <div class="form-group">
-              <label>الاسم بالكامل (بالعربية)</label>
-              <input type="text" id="emp-name-ar" class="form-control" placeholder="منى علي" required />
-            </div>
-            <div class="form-group">
-              <label>Job Title (EN)</label>
-              <input type="text" id="emp-title-en" class="form-control" value="Accountant" required />
-            </div>
-            <div class="form-group">
-              <label>المسمى الوظيفي (AR)</label>
-              <input type="text" id="emp-title-ar" class="form-control" value="محاسب" required />
-            </div>
-            <div class="form-group">
-              <label>Branch / الفرع</label>
-              <select id="emp-branch" class="form-control" required></select>
-            </div>
-            <div class="form-group">
-              <label>Assigned Workplace / موقع العمل</label>
-              <select id="emp-workplace" class="form-control" required></select>
-            </div>
-            <div class="form-group">
-              <label>Assigned Shift / الوردية</label>
-              <select id="emp-shift" class="form-control" required></select>
-            </div>
-            <div class="form-group">
-              <label>Biometric Policy / سياسة البصمة</label>
-              <select id="emp-bio-policy" class="form-control">
-                <option value="strict">Strict OS Biometric Required / بصمة إلزامية</option>
-                <option value="exception">Allow HR Biometric Exception / استثناء معتمد</option>
-              </select>
-            </div>
-            <div>
-              <button type="submit" class="btn btn-primary">Create Employee / إضافة الموظف</button>
-            </div>
-          </form>
-        </div>
+              <div class="hero-split">
+                <div class="hero-left-metrics">
+                  <div class="hero-big-num" id="hero-total-runs">0</div>
+                  <div class="hero-trend-line">
+                    <span class="badge badge-lime" id="hero-trend-badge">—</span>
+                    <span id="hero-trend-note"></span>
+                  </div>
+                  <p class="hero-sub-desc" id="hero-runs-subtitle"></p>
 
-        <div class="card" id="card-import-csv">
-          <div class="card-header">
-            <h3 class="card-title" id="ui-import-csv-title"></h3>
+                  <div class="hero-kv-list">
+                    <div class="hero-kv-row">
+                      <span id="ui-kv-bio-lbl">Biometric rate</span>
+                      <strong id="hero-kv-bio-val">—</strong>
+                    </div>
+                    <div class="hero-kv-row">
+                      <span id="ui-kv-dist-lbl">Avg geofence dist</span>
+                      <strong id="hero-kv-dist-val">—</strong>
+                    </div>
+                    <div class="hero-kv-row">
+                      <span id="ui-kv-peak-lbl">Peak check-in</span>
+                      <strong id="hero-kv-peak-val">—</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="hero-chart-stage" id="hero-chart-canvas"></div>
+              </div>
+
+              <div class="hero-insight-bar">
+                <div class="hero-insight-left">
+                  <div class="hero-insight-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                  </div>
+                  <div class="hero-insight-text" id="hero-insight-text"></div>
+                </div>
+                <div style="display:flex;gap:0.45rem;flex-wrap:wrap;">
+                  <button type="button" class="btn btn-primary btn-sm" id="btn-hero-focus-queue">Review queue</button>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-hero-open-register">Attendance log →</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Decision Grid: Left = Employee/Workplace Pulse Streams, Right = Needs You Decision Queue -->
+            <div class="decision-grid" style="margin-bottom:0.95rem;">
+              <div class="card" style="margin-bottom:0;">
+                <div class="card-header" style="margin-bottom:0.65rem;padding-bottom:0.55rem;">
+                  <h3 class="card-title" id="ui-workflows-title">Attendance streams & geofence health</h3>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-pulse-all-link">All employees →</button>
+                </div>
+                <div class="pulse-filter-tabs" role="tablist">
+                  <button type="button" class="pulse-filter-btn active" data-pulse-filter="all" id="pulse-tab-all">All</button>
+                  <button type="button" class="pulse-filter-btn" data-pulse-filter="exceptions" id="pulse-tab-exc">Needs attention</button>
+                  <button type="button" class="pulse-filter-btn" data-pulse-filter="healthy" id="pulse-tab-ok">Healthy</button>
+                </div>
+                <div id="workflows-pulse-list"></div>
+              </div>
+
+              <div class="needs-you-card" id="needs-you-card">
+                <div class="card-header" style="margin-bottom:0.75rem;padding-bottom:0.55rem;">
+                  <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <h3 class="card-title" id="ui-needs-you-title">Needs you</h3>
+                    <span class="badge badge-lime" id="needs-you-count">0</span>
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-open-full-queue">Open queue →</button>
+                </div>
+                <div id="needs-you-queue"></div>
+                <div class="decision-footer" id="ui-needs-you-footer">↵ approve · Esc decline</div>
+              </div>
+            </div>
+
+            <!-- Compact KPI Strip -->
+            <div class="kpi-grid" id="overview-kpis"></div>
+
+            <!-- Full Detailed Attendance Events Table -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title" id="ui-recent-events-title"></h3>
+              </div>
+              <div class="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th id="th-emp"></th>
+                      <th id="th-evt"></th>
+                      <th id="th-time"></th>
+                      <th id="th-wp"></th>
+                      <th id="th-dist"></th>
+                      <th id="th-bio"></th>
+                      <th id="th-status"></th>
+                      <th id="th-actions"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-recent-events"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
-          <p style="font-size:0.83rem;color:var(--text-muted);margin-top:0;">
-            Format: <code>employee_code,email,full_name_en,full_name_ar,job_title_en,job_title_ar,branch_id,default_workplace_id,default_shift_id</code>
-          </p>
-          <textarea id="csv-import-text" class="form-control" rows="4" style="width:100%;font-family:monospace;margin-bottom:0.75rem;">employee_code,email,full_name_en,full_name_ar,job_title_en,job_title_ar,branch_id,default_workplace_id,default_shift_id
+
+          <!-- TAB 2: EMPLOYEE MOBILE ATTENDANCE TERMINAL -->
+          <div id="tab-mobile" class="tab-pane hidden">
+            <div class="mobile-frame">
+              <div class="card-header">
+                <h3 class="card-title" id="ui-mobile-header"></h3>
+                <span id="mobile-emp-badge" class="badge badge-lime"></span>
+              </div>
+
+              <div id="mobile-context-summary" style="margin-bottom:1rem;font-size:0.88rem;"></div>
+
+              <div class="step-box">
+                <h4 style="margin-top:0;" id="ui-step1-location"></h4>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label id="ui-scenario-label" for="mobile-loc-scenario"></label>
+                    <select id="mobile-loc-scenario" class="form-control">
+                      <option value="inside" id="opt-scen-inside"></option>
+                      <option value="outside" id="opt-scen-outside"></option>
+                      <option value="poor_acc" id="opt-scen-poor"></option>
+                      <option value="stale" id="opt-scen-stale"></option>
+                      <option value="mock" id="opt-scen-mock"></option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="mobile-workplace-select">Workplace / موقع العمل</label>
+                    <select id="mobile-workplace-select" class="form-control"></select>
+                  </div>
+                </div>
+                <div id="mobile-gps-preview" style="font-size:0.84rem;color:var(--text-muted);background:#ffffff;padding:0.65rem;border-radius:10px;border:1px solid var(--border);"></div>
+              </div>
+
+              <div class="step-box">
+                <h4 style="margin-top:0;" id="ui-step2-biometric"></h4>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label id="ui-biomode-label" for="mobile-bio-mode"></label>
+                    <select id="mobile-bio-mode" class="form-control">
+                      <option value="biometric_strong" id="opt-bio-strong"></option>
+                      <option value="device_credential" id="opt-bio-pin"></option>
+                      <option value="exception_fallback" id="opt-bio-exc"></option>
+                      <option value="user_canceled" id="opt-bio-cancel"></option>
+                      <option value="shared_device" id="opt-bio-shared"></option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label id="ui-netmode-label" for="mobile-net-mode"></label>
+                    <select id="mobile-net-mode" class="form-control">
+                      <option value="online" id="opt-net-online"></option>
+                      <option value="offline" id="opt-net-offline"></option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="step-box">
+                <h4 style="margin-top:0;" id="ui-step3-submit"></h4>
+                <div style="display:flex;gap:0.65rem;flex-wrap:wrap;">
+                  <button type="button" class="btn btn-primary" data-evt="check_in" id="btn-mob-checkin"></button>
+                  <button type="button" class="btn btn-secondary" data-evt="break_start" id="btn-mob-breakstart"></button>
+                  <button type="button" class="btn btn-secondary" data-evt="break_end" id="btn-mob-breakend"></button>
+                  <button type="button" class="btn btn-accent" data-evt="check_out" id="btn-mob-checkout"></button>
+                  <button type="button" class="btn btn-secondary" id="btn-mob-sync-offline"></button>
+                </div>
+                <div id="offline-queue-box" style="margin-top:0.85rem;font-size:0.84rem;"></div>
+                <div id="mobile-tx-result" style="margin-top:0.85rem;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3: ATTENDANCE REGISTER & MANUAL CORRECTIONS -->
+          <div id="tab-attendance" class="tab-pane hidden">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Daily Attendance Register / سجل الحضور اليومي</h3>
+                <div style="display:flex;gap:0.5rem;align-items:center;">
+                  <input type="date" id="filter-att-date" class="form-control" style="width:auto;" />
+                  <button type="button" class="btn btn-accent btn-sm" id="btn-export-csv"></button>
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date / التاريخ</th>
+                      <th>Employee / الموظف</th>
+                      <th>Branch / الفرع</th>
+                      <th>Check-In / الحضور</th>
+                      <th>Check-Out / الانصراف</th>
+                      <th>State / الحالة</th>
+                      <th>Late (m) / تأخير</th>
+                      <th>Overtime (m) / إضافي</th>
+                      <th>Status / التقييم</th>
+                      <th>Notes / ملاحظات</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-attendance-register"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card" id="card-manual-correction">
+              <div class="card-header">
+                <h3 class="card-title" id="ui-manual-corr-title"></h3>
+              </div>
+              <form id="form-manual-correction" class="form-grid">
+                <div class="form-group">
+                  <label>Employee / الموظف</label>
+                  <select id="corr-employee-id" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                  <label>Date / التاريخ</label>
+                  <input type="date" id="corr-date" class="form-control" required />
+                </div>
+                <div class="form-group">
+                  <label>Correction Type / نوع التصحيح</label>
+                  <select id="corr-type" class="form-control">
+                    <option value="excuse_late_arrival">Excuse Late Arrival / إعفاء تأخير</option>
+                    <option value="missing_check_in">Missing Check-In / نسيان بصمة حضور</option>
+                    <option value="missing_check_out">Missing Check-Out / نسيان بصمة انصراف</option>
+                    <option value="time_adjustment">Time Adjustment / تعديل توقيت</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>New Status / الحالة بعد التصحيح</label>
+                  <select id="corr-status" class="form-control">
+                    <option value="present">Present / حاضر</option>
+                    <option value="late">Late / متأخر</option>
+                  </select>
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                  <label>Mandatory Audit Reason / سبب التصحيح الإداري (إلزامي لسجل المراجعة)</label>
+                  <input type="text" id="corr-reason" class="form-control" placeholder="e.g. Official client meeting approved by department head" required />
+                </div>
+                <div>
+                  <button type="submit" class="btn btn-primary">Save Audited Correction / حفظ التصحيح الموثق</button>
+                </div>
+              </form>
+              <div class="table-responsive" style="margin-top:1rem;">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Employee</th>
+                      <th>Type</th>
+                      <th>Original Value</th>
+                      <th>Corrected Value</th>
+                      <th>Reason</th>
+                      <th>Approver</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-corrections"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 4: EMPLOYEES MANAGEMENT & CSV IMPORT -->
+          <div id="tab-employees" class="tab-pane hidden">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Employees Directory / دليل الموظفين</h3>
+              </div>
+              <div class="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Code</th>
+                      <th>Name (AR / EN)</th>
+                      <th>Job Title</th>
+                      <th>Branch</th>
+                      <th>Workplace</th>
+                      <th>Biometric Policy</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-employees"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card" id="card-add-employee">
+              <div class="card-header">
+                <h3 class="card-title" id="ui-add-emp-title"></h3>
+              </div>
+              <form id="form-add-employee" class="form-grid">
+                <div class="form-group">
+                  <label>Employee Code / الرقم الوظيفي</label>
+                  <input type="text" id="emp-code" class="form-control" placeholder="ND-105" required />
+                </div>
+                <div class="form-group">
+                  <label>Work Email / البريد الإلكتروني</label>
+                  <input type="email" id="emp-email" class="form-control" placeholder="mona.ali@niledelta.eg" required />
+                </div>
+                <div class="form-group">
+                  <label>Full Name (English)</label>
+                  <input type="text" id="emp-name-en" class="form-control" placeholder="Mona Ali" required />
+                </div>
+                <div class="form-group">
+                  <label>الاسم بالكامل (بالعربية)</label>
+                  <input type="text" id="emp-name-ar" class="form-control" placeholder="منى علي" required />
+                </div>
+                <div class="form-group">
+                  <label>Job Title (EN)</label>
+                  <input type="text" id="emp-title-en" class="form-control" value="Accountant" required />
+                </div>
+                <div class="form-group">
+                  <label>المسمى الوظيفي (AR)</label>
+                  <input type="text" id="emp-title-ar" class="form-control" value="محاسب" required />
+                </div>
+                <div class="form-group">
+                  <label>Branch / الفرع</label>
+                  <select id="emp-branch" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                  <label>Assigned Workplace / موقع العمل</label>
+                  <select id="emp-workplace" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                  <label>Assigned Shift / الوردية</label>
+                  <select id="emp-shift" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                  <label>Biometric Policy / سياسة البصمة</label>
+                  <select id="emp-bio-policy" class="form-control">
+                    <option value="strict">Strict OS Biometric Required / بصمة إلزامية</option>
+                    <option value="exception">Allow HR Biometric Exception / استثناء معتمد</option>
+                  </select>
+                </div>
+                <div>
+                  <button type="submit" class="btn btn-primary">Create Employee / إضافة الموظف</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="card" id="card-import-csv">
+              <div class="card-header">
+                <h3 class="card-title" id="ui-import-csv-title"></h3>
+              </div>
+              <p style="font-size:0.83rem;color:var(--text-muted);margin-top:0;">
+                Format: <code>employee_code,email,full_name_en,full_name_ar,job_title_en,job_title_ar,branch_id,default_workplace_id,default_shift_id</code>
+              </p>
+              <textarea id="csv-import-text" class="form-control" rows="4" style="width:100%;font-family:monospace;margin-bottom:0.75rem;">employee_code,email,full_name_en,full_name_ar,job_title_en,job_title_ar,branch_id,default_workplace_id,default_shift_id
 ND-201,hossam.nabih@niledelta.eg,Hossam Nabih,حسام نبيه,Safety Engineer,مهندس سلامة وصحة مهنية,br_ramadan,wp_ramadan_factory,shift_factory_morn</textarea>
-          <button type="button" class="btn btn-accent" id="btn-import-csv">Import CSV Rows / استيراد</button>
-        </div>
-      </div>
+              <button type="button" class="btn btn-accent" id="btn-import-csv">Import CSV Rows / استيراد</button>
+            </div>
+          </div>
 
-      <!-- TAB 5: WORKPLACES & GEOFENCES -->
-      <div id="tab-workplaces" class="tab-pane hidden">
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Authorized Workplaces & Geofence Configurations / مواقع العمل والسياج الجغرافي</h3>
-          </div>
-          <div class="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Workplace Name (AR / EN)</th>
-                  <th>Type</th>
-                  <th>Coordinates (Lat, Lng)</th>
-                  <th>Permitted Radius (m)</th>
-                  <th>Max GPS Accuracy (m)</th>
-                  <th>Biometric Required</th>
-                </tr>
-              </thead>
-              <tbody id="tbody-workplaces"></tbody>
-            </table>
-          </div>
-        </div>
+          <!-- TAB 5: WORKPLACES & GEOFENCES -->
+          <div id="tab-workplaces" class="tab-pane hidden">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Authorized Workplaces & Geofence Configurations / مواقع العمل والسياج الجغرافي</h3>
+              </div>
+              <div class="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Code</th>
+                      <th>Workplace Name (AR / EN)</th>
+                      <th>Type</th>
+                      <th>Coordinates (Lat, Lng)</th>
+                      <th>Permitted Radius (m)</th>
+                      <th>Max GPS Accuracy (m)</th>
+                      <th>Biometric Required</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-workplaces"></tbody>
+                </table>
+              </div>
+            </div>
 
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title" id="ui-add-wp-title"></h3>
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title" id="ui-add-wp-title"></h3>
+              </div>
+              <form id="form-add-workplace" class="form-grid">
+                <div class="form-group">
+                  <label>Workplace Code</label>
+                  <input type="text" id="wp-code" class="form-control" placeholder="WP-GIZA-02" required />
+                </div>
+                <div class="form-group">
+                  <label>Name (EN)</label>
+                  <input type="text" id="wp-name-en" class="form-control" placeholder="6th of October Logistics Depot" required />
+                </div>
+                <div class="form-group">
+                  <label>الاسم (AR)</label>
+                  <input type="text" id="wp-name-ar" class="form-control" placeholder="مستودع السادس من أكتوبر" required />
+                </div>
+                <div class="form-group">
+                  <label>Type</label>
+                  <select id="wp-type" class="form-control">
+                    <option value="office">Office / مقر إداري</option>
+                    <option value="factory">Factory / مصنع</option>
+                    <option value="warehouse">Warehouse / مخزن</option>
+                    <option value="branch">Branch / فرع</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Latitude / خط العرض</label>
+                  <input type="number" step="0.0001" id="wp-lat" class="form-control" value="29.9725" required />
+                </div>
+                <div class="form-group">
+                  <label>Longitude / خط الطول</label>
+                  <input type="number" step="0.0001" id="wp-lng" class="form-control" value="30.9442" required />
+                </div>
+                <div class="form-group">
+                  <label>Permitted Radius (Meters) / نصف قطر السياج بالمتر</label>
+                  <input type="number" id="wp-radius" class="form-control" value="180" min="10" max="10000" required />
+                </div>
+                <div class="form-group">
+                  <label>Max GPS Accuracy (Meters) / أقصى هامش خطأ</label>
+                  <input type="number" id="wp-accuracy" class="form-control" value="50" min="5" max="200" required />
+                </div>
+                <div>
+                  <button type="submit" class="btn btn-primary">Save Workplace Geofence / حفظ موقع العمل</button>
+                </div>
+              </form>
+            </div>
           </div>
-          <form id="form-add-workplace" class="form-grid">
-            <div class="form-group">
-              <label>Workplace Code</label>
-              <input type="text" id="wp-code" class="form-control" placeholder="WP-GIZA-02" required />
-            </div>
-            <div class="form-group">
-              <label>Name (EN)</label>
-              <input type="text" id="wp-name-en" class="form-control" placeholder="6th of October Logistics Depot" required />
-            </div>
-            <div class="form-group">
-              <label>الاسم (AR)</label>
-              <input type="text" id="wp-name-ar" class="form-control" placeholder="مستودع السادس من أكتوبر" required />
-            </div>
-            <div class="form-group">
-              <label>Type</label>
-              <select id="wp-type" class="form-control">
-                <option value="office">Office / مقر إداري</option>
-                <option value="factory">Factory / مصنع</option>
-                <option value="warehouse">Warehouse / مخزن</option>
-                <option value="branch">Branch / فرع</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Latitude / خط العرض</label>
-              <input type="number" step="0.0001" id="wp-lat" class="form-control" value="29.9725" required />
-            </div>
-            <div class="form-group">
-              <label>Longitude / خط الطول</label>
-              <input type="number" step="0.0001" id="wp-lng" class="form-control" value="30.9442" required />
-            </div>
-            <div class="form-group">
-              <label>Permitted Radius (Meters) / نصف قطر السياج بالمتر</label>
-              <input type="number" id="wp-radius" class="form-control" value="180" min="10" max="10000" required />
-            </div>
-            <div class="form-group">
-              <label>Max GPS Accuracy (Meters) / أقصى هامش خطأ</label>
-              <input type="number" id="wp-accuracy" class="form-control" value="50" min="5" max="200" required />
-            </div>
-            <div>
-              <button type="submit" class="btn btn-primary">Save Workplace Geofence / حفظ موقع العمل</button>
-            </div>
-          </form>
-        </div>
-      </div>
 
-      <!-- TAB 6: LEAVE REQUESTS -->
-      <div id="tab-leaves" class="tab-pane hidden">
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Leave Requests / طلبات الإجازات</h3>
-          </div>
-          <div class="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>Employee</th>
-                  <th>Type</th>
-                  <th>Start Date</th>
-                  <th>End Date</th>
-                  <th>Days</th>
-                  <th>Reason</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="tbody-leaves"></tbody>
-            </table>
-          </div>
-        </div>
+          <!-- TAB 6: LEAVE REQUESTS -->
+          <div id="tab-leaves" class="tab-pane hidden">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Leave Requests / طلبات الإجازات</h3>
+              </div>
+              <div class="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Employee</th>
+                      <th>Type</th>
+                      <th>Start Date</th>
+                      <th>End Date</th>
+                      <th>Days</th>
+                      <th>Reason</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-leaves"></tbody>
+                </table>
+              </div>
+            </div>
 
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Submit New Leave Request / تقديم طلب إجازة</h3>
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Submit New Leave Request / تقديم طلب إجازة</h3>
+              </div>
+              <form id="form-leave-request" class="form-grid">
+                <div class="form-group">
+                  <label>Leave Type / نوع الإجازة</label>
+                  <select id="lv-type" class="form-control">
+                    <option value="annual">Annual Leave / إجازة اعتيادية</option>
+                    <option value="sick">Sick Leave / إجازة مرضية</option>
+                    <option value="emergency">Emergency Leave / إجازة عارضة</option>
+                    <option value="unpaid">Unpaid Leave / إجازة بدون راتب</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Start Date / من تاريخ</label>
+                  <input type="date" id="lv-start" class="form-control" required />
+                </div>
+                <div class="form-group">
+                  <label>End Date / إلى تاريخ</label>
+                  <input type="date" id="lv-end" class="form-control" required />
+                </div>
+                <div class="form-group">
+                  <label>Reason / السبب</label>
+                  <input type="text" id="lv-reason" class="form-control" required />
+                </div>
+                <div>
+                  <button type="submit" class="btn btn-primary">Submit Leave Request / إرسال الطلب</button>
+                </div>
+              </form>
+            </div>
           </div>
-          <form id="form-leave-request" class="form-grid">
-            <div class="form-group">
-              <label>Leave Type / نوع الإجازة</label>
-              <select id="lv-type" class="form-control">
-                <option value="annual">Annual Leave / إجازة اعتيادية</option>
-                <option value="sick">Sick Leave / إجازة مرضية</option>
-                <option value="emergency">Emergency Leave / إجازة عارضة</option>
-                <option value="unpaid">Unpaid Leave / إجازة بدون راتب</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Start Date / من تاريخ</label>
-              <input type="date" id="lv-start" class="form-control" required />
-            </div>
-            <div class="form-group">
-              <label>End Date / إلى تاريخ</label>
-              <input type="date" id="lv-end" class="form-control" required />
-            </div>
-            <div class="form-group">
-              <label>Reason / السبب</label>
-              <input type="text" id="lv-reason" class="form-control" required />
-            </div>
-            <div>
-              <button type="submit" class="btn btn-primary">Submit Leave Request / إرسال الطلب</button>
-            </div>
-          </form>
-        </div>
-      </div>
 
-      <!-- TAB 7: APPROVED DEVICES & SECURITY AUDIT LOGS -->
-      <div id="tab-devices" class="tab-pane hidden">
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Employee Registered Mobile Devices / الأجهزة المعتمدة للموظفين</h3>
-          </div>
-          <div class="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>Employee</th>
-                  <th>Device Identifier</th>
-                  <th>Model & OS</th>
-                  <th>Biometric Hardware / Enrolled</th>
-                  <th>Status</th>
-                  <th>Last Used</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="tbody-devices"></tbody>
-            </table>
-          </div>
-        </div>
+          <!-- TAB 7: APPROVED DEVICES & SECURITY AUDIT LOGS -->
+          <div id="tab-devices" class="tab-pane hidden">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Employee Registered Mobile Devices / الأجهزة المعتمدة للموظفين</h3>
+              </div>
+              <div class="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Employee</th>
+                      <th>Device Identifier</th>
+                      <th>Model & OS</th>
+                      <th>Biometric Hardware / Enrolled</th>
+                      <th>Status</th>
+                      <th>Last Used</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-devices"></tbody>
+                </table>
+              </div>
+            </div>
 
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Immutable Security & Administrative Audit Logs / سجل المراجعة الأمني</h3>
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Immutable Security & Administrative Audit Logs / سجل المراجعة الأمني</h3>
+              </div>
+              <div class="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Timestamp</th>
+                      <th>Actor Role</th>
+                      <th>Action</th>
+                      <th>Target</th>
+                      <th>Details</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-audit-logs"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
-          <div class="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>Timestamp</th>
-                  <th>Actor Role</th>
-                  <th>Action</th>
-                  <th>Target</th>
-                  <th>Details</th>
-                </tr>
-              </thead>
-              <tbody id="tbody-audit-logs"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
 
-      <!-- TAB 8: SUBSCRIPTION & COMMERCIAL BILLING -->
-      <div id="tab-subscription" class="tab-pane hidden">
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Company Subscription & Plan Limits / باقة الاشتراك وحدود الاستخدام</h3>
-          </div>
-          <div id="subscription-summary-box"></div>
-        </div>
+          <!-- TAB 8: SUBSCRIPTION & COMMERCIAL BILLING -->
+          <div id="tab-subscription" class="tab-pane hidden">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Company Subscription & Plan Limits / باقة الاشتراك وحدود الاستخدام</h3>
+              </div>
+              <div id="subscription-summary-box"></div>
+            </div>
 
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Submit Manual Subscription Payment Reference (InstaPay / Bank Transfer / SADAD)</h3>
-          </div>
-          <form id="form-submit-payment" class="form-grid">
-            <div class="form-group">
-              <label>Amount / المبلغ</label>
-              <input type="number" id="pay-amount" class="form-control" value="3500" required />
-            </div>
-            <div class="form-group">
-              <label>Currency / العملة</label>
-              <select id="pay-currency" class="form-control">
-                <option value="EGP">EGP (جنيه مصري)</option>
-                <option value="SAR">SAR (ريال سعودي)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Payment Method / وسيلة الدفع</label>
-              <select id="pay-method" class="form-control">
-                <option value="instapay">InstaPay Egypt / إنستا باي</option>
-                <option value="bank_transfer">Corporate Bank Transfer / تحويل بنكي</option>
-                <option value="fawry">Fawry Corporate / فوري</option>
-                <option value="sadad">KSA SADAD / سداد</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Transfer Reference Number / رقم مرجع التحويل (لا يتم تخزين بيانات البطاقات البنكية)</label>
-              <input type="text" id="pay-ref" class="form-control" placeholder="INSTA-2026-884120" required />
-            </div>
-            <div>
-              <button type="submit" class="btn btn-primary">Submit Payment Reference / إرسال إشعار السداد</button>
-            </div>
-          </form>
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Submit Manual Subscription Payment Reference (InstaPay / Bank Transfer / SADAD)</h3>
+              </div>
+              <form id="form-submit-payment" class="form-grid">
+                <div class="form-group">
+                  <label>Amount / المبلغ</label>
+                  <input type="number" id="pay-amount" class="form-control" value="3500" required />
+                </div>
+                <div class="form-group">
+                  <label>Currency / العملة</label>
+                  <select id="pay-currency" class="form-control">
+                    <option value="EGP">EGP (جنيه مصري)</option>
+                    <option value="SAR">SAR (ريال سعودي)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Payment Method / وسيلة الدفع</label>
+                  <select id="pay-method" class="form-control">
+                    <option value="instapay">InstaPay Egypt / إنستا باي</option>
+                    <option value="bank_transfer">Corporate Bank Transfer / تحويل بنكي</option>
+                    <option value="fawry">Fawry Corporate / فوري</option>
+                    <option value="sadad">KSA SADAD / سداد</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Transfer Reference Number / رقم مرجع التحويل (لا يتم تخزين بيانات البطاقات البنكية)</label>
+                  <input type="text" id="pay-ref" class="form-control" placeholder="INSTA-2026-884120" required />
+                </div>
+                <div>
+                  <button type="submit" class="btn btn-primary">Submit Payment Reference / إرسال إشعار السداد</button>
+                </div>
+              </form>
 
-          <div class="table-responsive" style="margin-top:1rem;">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Amount</th>
-                  <th>Method</th>
-                  <th>Reference Number</th>
-                  <th>Verification Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="tbody-payments"></tbody>
-            </table>
+              <div class="table-responsive" style="margin-top:1rem;">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Amount</th>
+                      <th>Method</th>
+                      <th>Reference Number</th>
+                      <th>Verification Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-payments"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>

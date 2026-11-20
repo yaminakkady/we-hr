@@ -496,6 +496,23 @@ if (require.main === module) {
     console.log(`  Web Dashboard & API running at: http://${host}:${port}`);
     console.log(`  Default Demo Password for seeded accounts: WeHR@2026`);
     console.log(`======================================================================\n`);
+
+    if (process.env.NODE_ENV === 'production' || process.env.KEEP_ALIVE_ENABLED === 'true') {
+      const externalUrl = (
+        process.env.RENDER_EXTERNAL_URL ||
+        process.env.KEEP_ALIVE_URL ||
+        'https://we-hr.onrender.com'
+      ).replace(/\/$/, '');
+      const intervalMs = 10 * 60 * 1000;
+      const timer = setInterval(() => {
+        fetch(`${externalUrl}/api/health`, {
+          headers: { Accept: 'application/json' },
+        }).catch(() => {});
+      }, intervalMs);
+      if (typeof timer.unref === 'function') {
+        timer.unref();
+      }
+    }
   });
 }
 

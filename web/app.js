@@ -15,11 +15,33 @@
     workplaces: [],
     employeesList: [],
     offlineQueue: JSON.parse(localStorage.getItem('wehr_offline_queue') || '[]'),
+    chartMode: localStorage.getItem('wehr_chart_mode') || 'dots',
+    pulseFilter: 'all',
+    range: 'today',
+    searchQuery: '',
+    lastOverviewData: null,
+    lastEmployeesData: [],
+    pendingQueueItems: [],
   };
 
   function t(key) {
     const dict = window.WE_HR_I18N[state.lang] || window.WE_HR_I18N.ar;
     return dict[key] || key;
+  }
+
+  function esc(val) {
+    return String(val ?? '').replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    })[c]);
+  }
+
+  function setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
   }
 
   function showAlert(message, type = 'success') {
@@ -43,75 +65,143 @@
     return { status: resp.status, ok: resp.ok, data };
   }
 
+  function updateMainHeaderMeta(tabName) {
+    const labelMap = {
+      overview: t('navOverview'),
+      mobile: t('navMobileApp'),
+      attendance: t('navAttendance'),
+      employees: t('navEmployees'),
+      workplaces: t('navWorkplaces'),
+      leaves: t('navLeaves'),
+      devices: t('navDevices'),
+      subscription: t('navSubscription'),
+    };
+    const tenantTag = state.company
+      ? (state.lang === 'ar' ? state.company.name_ar : state.company.name_en)
+      : 'WE HR';
+    setText('ops-breadcrumb', `${String(tenantTag).toUpperCase()} / ${String(tabName).toUpperCase()}`);
+    setText('ops-page-title', labelMap[tabName] || tabName);
+
+    const now = new Date();
+    const formattedDate = now.toLocaleDateString(state.lang === 'ar' ? 'ar-EG' : 'en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    });
+    const formattedTime = now.toLocaleTimeString(state.lang === 'ar' ? 'ar-EG' : 'en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    setText('ops-live-datetime', `${formattedDate} · ${formattedTime}`);
+  }
+
   function applyLocalization() {
     const dict = window.WE_HR_I18N[state.lang];
     document.documentElement.lang = state.lang;
     document.documentElement.dir = dict.dir;
 
-    document.getElementById('ui-app-title').textContent = t('appTitle');
-    document.getElementById('ui-app-tagline').textContent = t('tagline');
-    document.getElementById('btn-lang-toggle').textContent = t('langSwitch');
-    document.getElementById('btn-logout').textContent = t('logoutBtn');
+    setText('ui-app-title', t('appTitle'));
+    setText('ui-app-tagline', t('tagline'));
+    setText('btn-lang-toggle', t('langSwitch'));
+    setText('btn-logout', t('logoutBtn'));
 
-    document.getElementById('ui-login-title').textContent = t('loginTitle');
-    document.getElementById('ui-login-subtitle').textContent = t('loginSubtitle');
-    document.getElementById('ui-email-label').textContent = t('emailLabel');
-    document.getElementById('ui-password-label').textContent = t('passwordLabel');
-    document.getElementById('ui-signin-btn').textContent = t('signInBtn');
-    document.getElementById('ui-quick-demo-label').textContent = t('quickDemoLabel');
+    setText('ui-login-title', t('loginTitle'));
+    setText('ui-login-subtitle', t('loginSubtitle'));
+    setText('ui-email-label', t('emailLabel'));
+    setText('ui-password-label', t('passwordLabel'));
+    setText('ui-signin-btn', t('signInBtn'));
+    setText('ui-quick-demo-label', t('quickDemoLabel'));
 
-    document.getElementById('tab-btn-overview').textContent = t('navOverview');
-    document.getElementById('tab-btn-mobile').textContent = t('navMobileApp');
-    document.getElementById('tab-btn-attendance').textContent = t('navAttendance');
-    document.getElementById('tab-btn-employees').textContent = t('navEmployees');
-    document.getElementById('tab-btn-workplaces').textContent = t('navWorkplaces');
-    document.getElementById('tab-btn-leaves').textContent = t('navLeaves');
-    document.getElementById('tab-btn-devices').textContent = t('navDevices');
-    document.getElementById('tab-btn-subscription').textContent = t('navSubscription');
+    setText('tab-btn-overview', t('navOverview'));
+    setText('tab-btn-mobile', t('navMobileApp'));
+    setText('tab-btn-attendance', t('navAttendance'));
+    setText('tab-btn-employees', t('navEmployees'));
+    setText('tab-btn-workplaces', t('navWorkplaces'));
+    setText('tab-btn-leaves', t('navLeaves'));
+    setText('tab-btn-devices', t('navDevices'));
+    setText('tab-btn-subscription', t('navSubscription'));
 
-    document.getElementById('ui-recent-events-title').textContent = t('recentEventsTitle');
-    document.getElementById('th-emp').textContent = t('colEmployee');
-    document.getElementById('th-evt').textContent = t('colEventType');
-    document.getElementById('th-time').textContent = t('colServerTime');
-    document.getElementById('th-wp').textContent = t('colWorkplace');
-    document.getElementById('th-dist').textContent = t('colDistance');
-    document.getElementById('th-bio').textContent = t('colBiometric');
-    document.getElementById('th-status').textContent = t('colStatus');
-    document.getElementById('th-actions').textContent = t('colActions');
+    setText('ui-ops-workspace-sub', t('opsWorkspaceSub'));
+    setText('ui-side-workspace-lbl', t('opsSideWorkspace'));
+    setText('ui-side-live-lbl', t('opsSideLive'));
+    setText('ui-side-branches-lbl', t('opsSideBranches'));
+    const searchEl = document.getElementById('ops-quick-search');
+    if (searchEl) searchEl.placeholder = t('opsSearchPlaceholder');
 
-    document.getElementById('ui-mobile-header').textContent = t('mobileHeader');
-    document.getElementById('ui-step1-location').textContent = t('step1Location');
-    document.getElementById('ui-step2-biometric').textContent = t('step2Biometric');
-    document.getElementById('ui-step3-submit').textContent = t('step3Submit');
-    document.getElementById('ui-scenario-label').textContent = t('scenarioLabel');
-    document.getElementById('opt-scen-inside').textContent = t('scenInsideHq');
-    document.getElementById('opt-scen-outside').textContent = t('scenOutside');
-    document.getElementById('opt-scen-poor').textContent = t('scenPoorAcc');
-    document.getElementById('opt-scen-stale').textContent = t('scenStale');
-    document.getElementById('opt-scen-mock').textContent = t('scenMock');
+    setText('ui-live-present-lbl', t('opsLivePresent'));
+    setText('ui-live-review-lbl', t('opsLiveReview'));
+    setText('ui-live-rejected-lbl', t('opsLiveRejected'));
 
-    document.getElementById('ui-biomode-label').textContent = t('bioModeLabel');
-    document.getElementById('opt-bio-strong').textContent = t('bioStrong');
-    document.getElementById('opt-bio-pin').textContent = t('bioPinOnly');
-    document.getElementById('opt-bio-exc').textContent = t('bioExceptionMode');
-    document.getElementById('opt-bio-cancel').textContent = t('bioCanceled');
-    document.getElementById('opt-bio-shared').textContent = t('bioSharedDevice');
+    setText('btn-range-today', t('opsRangeToday'));
+    setText('btn-range-7d', t('opsRange7d'));
+    setText('btn-range-30d', t('opsRange30d'));
+    setText('btn-header-record-attendance', t('opsRecordAttendance'));
 
-    document.getElementById('ui-netmode-label').textContent = t('networkModeLabel');
-    document.getElementById('opt-net-online').textContent = t('netOnline');
-    document.getElementById('opt-net-offline').textContent = t('netOffline');
+    setText('ui-hero-title', t('heroTitle'));
+    setText('ui-leg-verified', t('legVerified'));
+    setText('ui-leg-scheduled', t('legScheduled'));
+    setText('ui-leg-flagged', t('legFlagged'));
+    setText('ui-leg-review', t('legReview'));
+    setText('btn-hero-open-register-top', t('heroOpenRegister'));
+    setText('ui-kv-bio-lbl', t('heroKvBio'));
+    setText('ui-kv-dist-lbl', t('heroKvDist'));
+    setText('ui-kv-peak-lbl', t('heroKvPeak'));
+    setText('hero-runs-subtitle', t('heroSubDesc'));
+    setText('btn-hero-focus-queue', t('heroReviewQueueBtn'));
+    setText('btn-hero-open-register', t('heroLogBtn'));
 
-    document.getElementById('btn-mob-checkin').textContent = t('btnCheckIn');
-    document.getElementById('btn-mob-checkout').textContent = t('btnCheckOut');
-    document.getElementById('btn-mob-breakstart').textContent = t('btnBreakStart');
-    document.getElementById('btn-mob-breakend').textContent = t('btnBreakEnd');
-    document.getElementById('btn-mob-sync-offline').textContent = t('btnSyncOffline');
+    setText('ui-workflows-title', t('workflowsTitle'));
+    setText('btn-pulse-all-link', t('workflowsAllLink'));
+    setText('pulse-tab-all', t('pulseFilterAll'));
+    setText('pulse-tab-exc', t('pulseFilterExc'));
+    setText('pulse-tab-ok', t('pulseFilterOk'));
+    setText('ui-needs-you-title', t('needsYouTitle'));
+    setText('btn-open-full-queue', t('openQueueBtn'));
+    setText('ui-needs-you-footer', t('needsYouFooter'));
 
-    document.getElementById('btn-export-csv').textContent = t('exportCsvBtn');
-    document.getElementById('ui-manual-corr-title').textContent = t('manualCorrectionTitle');
-    document.getElementById('ui-add-emp-title').textContent = t('addEmployeeTitle');
-    document.getElementById('ui-import-csv-title').textContent = t('importCsvTitle');
-    document.getElementById('ui-add-wp-title').textContent = t('addWorkplaceTitle');
+    setText('ui-recent-events-title', t('recentEventsTitle'));
+    setText('th-emp', t('colEmployee'));
+    setText('th-evt', t('colEventType'));
+    setText('th-time', t('colServerTime'));
+    setText('th-wp', t('colWorkplace'));
+    setText('th-dist', t('colDistance'));
+    setText('th-bio', t('colBiometric'));
+    setText('th-status', t('colStatus'));
+    setText('th-actions', t('colActions'));
+
+    setText('ui-mobile-header', t('mobileHeader'));
+    setText('ui-step1-location', t('step1Location'));
+    setText('ui-step2-biometric', t('step2Biometric'));
+    setText('ui-step3-submit', t('step3Submit'));
+    setText('ui-scenario-label', t('scenarioLabel'));
+    setText('opt-scen-inside', t('scenInsideHq'));
+    setText('opt-scen-outside', t('scenOutside'));
+    setText('opt-scen-poor', t('scenPoorAcc'));
+    setText('opt-scen-stale', t('scenStale'));
+    setText('opt-scen-mock', t('scenMock'));
+
+    setText('ui-biomode-label', t('bioModeLabel'));
+    setText('opt-bio-strong', t('bioStrong'));
+    setText('opt-bio-pin', t('bioPinOnly'));
+    setText('opt-bio-exc', t('bioExceptionMode'));
+    setText('opt-bio-cancel', t('bioCanceled'));
+    setText('opt-bio-shared', t('bioSharedDevice'));
+
+    setText('ui-netmode-label', t('networkModeLabel'));
+    setText('opt-net-online', t('netOnline'));
+    setText('opt-net-offline', t('netOffline'));
+
+    setText('btn-mob-checkin', t('btnCheckIn'));
+    setText('btn-mob-checkout', t('btnCheckOut'));
+    setText('btn-mob-breakstart', t('btnBreakStart'));
+    setText('btn-mob-breakend', t('btnBreakEnd'));
+    setText('btn-mob-sync-offline', t('btnSyncOffline'));
+
+    setText('btn-export-csv', t('exportCsvBtn'));
+    setText('ui-manual-corr-title', t('manualCorrectionTitle'));
+    setText('ui-add-emp-title', t('addEmployeeTitle'));
+    setText('ui-import-csv-title', t('importCsvTitle'));
+    setText('ui-add-wp-title', t('addWorkplaceTitle'));
   }
 
   async function loadDemoAccounts() {
@@ -126,8 +216,8 @@
       const compName = state.lang === 'ar' ? acc.company_name_ar || 'منصة We HR العامة' : acc.company_name_en || 'Platform Super Admin';
       const empName = state.lang === 'ar' ? acc.full_name_ar || acc.email : acc.full_name_en || acc.email;
       btn.innerHTML = `
-        <div style="font-weight:700;font-size:0.84rem;color:var(--primary);">${empName} (${acc.role})</div>
-        <div style="font-size:0.76rem;color:var(--text-muted);">${compName} — <code>${acc.email}</code></div>
+        <div style="font-weight:700;font-size:0.84rem;color:var(--primary);">${esc(empName)} <span class="badge badge-neutral">${esc(acc.role)}</span></div>
+        <div style="font-size:0.76rem;color:var(--text-muted);margin-top:0.2rem;">${esc(compName)} — <code>${esc(acc.email)}</code></div>
       `;
       btn.addEventListener('click', () => {
         document.getElementById('login-email').value = acc.email;
@@ -140,7 +230,7 @@
 
   function renderBiometricBadge(evt) {
     if (evt.biometric_verified) {
-      return `<span class="badge badge-success">${t('bio_verified')}</span>`;
+      return `<span class="badge badge-lime">${t('bio_verified')}</span>`;
     }
     if (evt.auth_method === 'device_credential') {
       return `<span class="badge badge-danger">${t('bio_pin')}</span>`;
@@ -156,7 +246,7 @@
 
   function renderSyncStatusBadge(status) {
     const map = {
-      accepted: 'badge-success',
+      accepted: 'badge-lime',
       needs_review: 'badge-warn',
       pending: 'badge-info',
       rejected: 'badge-danger',
@@ -164,19 +254,497 @@
     return `<span class="badge ${map[status] || 'badge-info'}">${t('status_' + status)}</span>`;
   }
 
+  // ==========================================================================
+  // FIELDNOTE HERO 3-MODE CHART RENDERER (Dots / Ridgelines / 3D Bars)
+  // ==========================================================================
+  function buildHourlyBuckets(events) {
+    const buckets = Array.from({ length: 24 }, (_, hour) => ({
+      hour,
+      verified: 0,
+      flagged: 0,
+      scheduled: 0,
+      items: [],
+    }));
+    for (const evt of events || []) {
+      const dt = new Date(evt.server_timestamp);
+      const hr = Number.isNaN(dt.getTime()) ? 9 : dt.getHours();
+      const b = buckets[Math.max(0, Math.min(23, hr))];
+      b.items.push(evt);
+      if (evt.sync_status === 'rejected' || evt.sync_status === 'needs_review') {
+        b.flagged += 1;
+      } else {
+        b.verified += 1;
+      }
+    }
+    // Add scheduled shift baseline projections for upcoming hours so timeline feels alive
+    const nowHour = new Date().getHours();
+    [9, 10, 14, 17, 22].forEach((sh) => {
+      if (sh > nowHour) {
+        buckets[sh].scheduled = Math.max(buckets[sh].scheduled, 2);
+      }
+    });
+    return { buckets, nowHour };
+  }
+
+  function renderHeroChart(mode, events) {
+    const stage = document.getElementById('hero-chart-canvas');
+    if (!stage) return;
+    const { buckets, nowHour } = buildHourlyBuckets(events);
+    const W = 640;
+    const H = 195;
+    const padL = 24;
+    const padR = 16;
+    const padT = 28;
+    const padB = 26;
+    const plotW = W - padL - padR;
+    const plotH = H - padT - padB;
+    const stepX = plotW / 24;
+    const nowX = padL + (nowHour + new Date().getMinutes() / 60) * stepX;
+    const nowLabel = `${String(nowHour).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
+
+    const flaggedEvent = (events || []).find((e) => e.sync_status === 'rejected' || e.sync_status === 'needs_review');
+    const flaggedTime = flaggedEvent
+      ? new Date(flaggedEvent.server_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+      : null;
+
+    let bodySvg = '';
+
+    // Subtle background dot grid
+    bodySvg += `<defs><pattern id="weGridDots" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="0.8" fill="#e2e8f0"/></pattern></defs>`;
+    bodySvg += `<rect x="${padL}" y="${padT}" width="${plotW}" height="${plotH}" fill="url(#weGridDots)" rx="8"/>`;
+
+    if (mode === 'dots') {
+      const maxStack = Math.max(6, ...buckets.map((b) => b.verified + b.flagged + b.scheduled));
+      const rowH = Math.min(13, plotH / maxStack);
+      buckets.forEach((b, h) => {
+        const cx = padL + h * stepX + stepX / 2;
+        let idx = 0;
+        for (let i = 0; i < b.verified; i++) {
+          const cy = padT + plotH - 8 - idx * rowH;
+          bodySvg += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="#18181b"/>`;
+          idx++;
+        }
+        for (let i = 0; i < b.flagged; i++) {
+          const cy = padT + plotH - 8 - idx * rowH;
+          bodySvg += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4.2" fill="#ef4444"/>`;
+          idx++;
+        }
+        for (let i = 0; i < b.scheduled; i++) {
+          const cy = padT + plotH - 8 - idx * rowH;
+          bodySvg += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="3.6" fill="#ffffff" stroke="#9ca3af" stroke-width="1.4"/>`;
+          idx++;
+        }
+        if (b.verified + b.flagged + b.scheduled === 0 && h % 2 === 0) {
+          const cy = padT + plotH - 8;
+          bodySvg += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="2" fill="#d1d5db"/>`;
+        }
+      });
+    } else if (mode === 'waves') {
+      // Group events by workplace for stacked ridgelines (Slide 2 look)
+      const groupsMap = new Map();
+      for (const e of events || []) {
+        const name = (state.lang === 'ar' ? e.workplace_name_ar : e.workplace_name_en) || 'Main HQ';
+        if (!groupsMap.has(name)) groupsMap.set(name, new Array(24).fill(0));
+        const hr = new Date(e.server_timestamp).getHours();
+        groupsMap.get(name)[Math.max(0, Math.min(23, hr))] += 1;
+      }
+      if (groupsMap.size === 0) {
+        groupsMap.set(state.lang === 'ar' ? 'المقر الرئيسي' : 'Main HQ', new Array(24).fill(0));
+      }
+      const streams = Array.from(groupsMap.entries()).slice(0, 5);
+      const laneH = plotH / streams.length;
+      streams.forEach(([name, arr], idx) => {
+        const baseY = padT + (idx + 1) * laneH - 6;
+        const maxVal = Math.max(1, ...arr);
+        let d = `M ${padL} ${baseY}`;
+        for (let h = 0; h < 24; h++) {
+          const x = padL + h * stepX + stepX / 2;
+          const amp = (arr[h] / maxVal) * (laneH * 0.65);
+          const y = baseY - amp;
+          const prevX = h === 0 ? padL : padL + (h - 1) * stepX + stepX / 2;
+          const midX = (prevX + x) / 2;
+          d += ` C ${midX.toFixed(1)} ${baseY}, ${midX.toFixed(1)} ${y.toFixed(1)}, ${x.toFixed(1)} ${y.toFixed(1)}`;
+        }
+        d += ` L ${padL + plotW} ${baseY}`;
+        bodySvg += `<path d="${d}" fill="rgba(24,24,27,0.05)" stroke="#18181b" stroke-width="1.6"/>`;
+        const shortName = name.length > 20 ? name.slice(0, 18) + '…' : name;
+        bodySvg += `<text x="${padL + 4}" y="${baseY - laneH * 0.48}" font-size="9.5" fill="#6b7280" font-family="ui-monospace,monospace">${esc(shortName)}</text>`;
+      });
+    } else {
+      // 3D Isometric Column Bars (Slide 3 look)
+      const maxTotal = Math.max(4, ...buckets.map((b) => b.verified + b.flagged + b.scheduled));
+      const barW = Math.max(8, stepX * 0.56);
+      buckets.forEach((b, h) => {
+        const total = b.verified + b.flagged;
+        const val = total || b.scheduled;
+        if (!val) {
+          const bx = padL + h * stepX + (stepX - barW) / 2;
+          bodySvg += `<rect x="${bx.toFixed(1)}" y="${(padT + plotH - 4).toFixed(1)}" width="${barW.toFixed(1)}" height="3" rx="1" fill="#e2e8f0"/>`;
+          return;
+        }
+        const barH = Math.max(12, (val / maxTotal) * (plotH - 16));
+        const bx = padL + h * stepX + (stepX - barW) / 2;
+        const by = padT + plotH - barH;
+        const isAlert = b.flagged > 0;
+        const isFuture = total === 0 && b.scheduled > 0;
+        const fillFront = isAlert ? '#fee2e2' : isFuture ? '#ffffff' : '#e5e7eb';
+        const fillSide = isAlert ? '#fca5a5' : isFuture ? '#e2e8f0' : '#cbd5e1';
+        const strokeCol = isAlert ? '#ef4444' : isFuture ? '#9ca3af' : '#18181b';
+        bodySvg += `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${barW.toFixed(1)}" height="${barH.toFixed(1)}" rx="2" fill="${fillFront}" stroke="${strokeCol}" stroke-width="1" ${isFuture ? 'stroke-dasharray="2 2"' : ''}/>`;
+        bodySvg += `<polygon points="${(bx + barW).toFixed(1)},${by.toFixed(1)} ${(bx + barW + 4).toFixed(1)},${(by - 4).toFixed(1)} ${(bx + barW + 4).toFixed(1)},${(by + barH - 4).toFixed(1)} ${(bx + barW).toFixed(1)},${(by + barH).toFixed(1)}" fill="${fillSide}"/>`;
+        if (isAlert) {
+          bodySvg += `<circle cx="${(bx + barW / 2).toFixed(1)}" cy="${(by - 5).toFixed(1)}" r="3.2" fill="#ef4444"/>`;
+        }
+      });
+    }
+
+    // X-Axis labels (00, 03, 06, 09, 12, 15, 18, 21, 24)
+    for (let h = 0; h <= 24; h += 3) {
+      const lx = padL + h * stepX;
+      bodySvg += `<text x="${lx.toFixed(1)}" y="${H - 7}" text-anchor="middle" font-size="9.5" fill="#9ca3af" font-family="ui-monospace,monospace">${String(h).padStart(2, '0')}</text>`;
+    }
+
+    // NOW marker line & pill
+    bodySvg += `<line x1="${nowX.toFixed(1)}" y1="${padT - 4}" x2="${nowX.toFixed(1)}" y2="${padT + plotH}" stroke="#18181b" stroke-width="1.2" stroke-dasharray="3 3"/>`;
+    const pillX = Math.min(W - 92, Math.max(padL, nowX + 4));
+    bodySvg += `<rect x="${pillX.toFixed(1)}" y="5" width="76" height="19" rx="9.5" fill="#18181b"/>`;
+    bodySvg += `<circle cx="${(pillX + 11).toFixed(1)}" cy="14.5" r="3" fill="#d4f759"/>`;
+    bodySvg += `<text x="${(pillX + 19).toFixed(1)}" y="18" font-size="9.5" font-weight="700" fill="#ffffff" font-family="ui-monospace,monospace">NOW ${nowLabel}</text>`;
+
+    // Anomaly callout pill if any flagged event exists
+    if (flaggedEvent && flaggedTime) {
+      const fx = Math.max(padL + 10, Math.min(W - 155, padL + 8 * stepX));
+      bodySvg += `<rect x="${fx}" y="6" width="142" height="18" rx="9" fill="#ffffff" stroke="#e2e5ec"/>`;
+      bodySvg += `<circle cx="${fx + 10}" cy="15" r="3" fill="#ef4444"/>`;
+      bodySvg += `<text x="${fx + 18}" y="18" font-size="8.5" font-weight="600" fill="#111827" font-family="ui-monospace,monospace">${flaggedTime} · ${esc(flaggedEvent.rejection_code ? flaggedEvent.rejection_code.slice(0, 14) : 'NEEDS REVIEW')}</text>`;
+    }
+
+    stage.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Attendance activity chart">${bodySvg}</svg>`;
+  }
+
+  // ==========================================================================
+  // WORKFLOWS PULSE & NEEDS YOU DECISION QUEUE
+  // ==========================================================================
+  function renderWorkflowsPulse(events, employees) {
+    const container = document.getElementById('workflows-pulse-list');
+    if (!container) return;
+
+    const query = state.searchQuery.trim().toLowerCase();
+    const byEmp = new Map();
+    for (const e of employees || []) {
+      byEmp.set(e.id, { employee: e, events: [] });
+    }
+    for (const ev of events || []) {
+      if (!byEmp.has(ev.employee_id)) {
+        byEmp.set(ev.employee_id, {
+          employee: {
+            id: ev.employee_id,
+            employee_code: ev.employee_code,
+            full_name_ar: ev.full_name_ar,
+            full_name_en: ev.full_name_en,
+            workplace_name_ar: ev.workplace_name_ar,
+            workplace_name_en: ev.workplace_name_en,
+          },
+          events: [],
+        });
+      }
+      byEmp.get(ev.employee_id).events.push(ev);
+    }
+
+    let rows = Array.from(byEmp.values());
+    if (query) {
+      rows = rows.filter((r) =>
+        `${r.employee.full_name_en || ''} ${r.employee.full_name_ar || ''} ${r.employee.employee_code || ''}`
+          .toLowerCase()
+          .includes(query)
+      );
+    }
+    if (state.pulseFilter === 'exceptions') {
+      rows = rows.filter((r) => r.events.some((ev) => ev.sync_status === 'rejected' || ev.sync_status === 'needs_review'));
+    } else if (state.pulseFilter === 'healthy') {
+      rows = rows.filter((r) => r.events.length > 0 && r.events.every((ev) => ev.sync_status === 'accepted'));
+    }
+
+    if (!rows.length) {
+      container.innerHTML = `<div style="padding:1.25rem;text-align:center;color:var(--text-muted);font-size:0.84rem;">No matching streams.</div>`;
+      return;
+    }
+
+    container.innerHTML = rows
+      .slice(0, 6)
+      .map((row) => {
+        const empName = state.lang === 'ar' ? row.employee.full_name_ar : row.employee.full_name_en;
+        const wpName =
+          (state.lang === 'ar' ? row.employee.workplace_name_ar : row.employee.workplace_name_en) || 'Workplace';
+        const latest = row.events[0];
+
+        // 24-tick barcode strip representing recent shift/event health
+        const ticks = Array.from({ length: 24 }, (_, idx) => {
+          const ev = row.events[idx % Math.max(1, row.events.length)];
+          if (!row.events.length || idx < 24 - Math.min(20, row.events.length * 4)) {
+            return '<span></span>';
+          }
+          if (!ev) return '<span class="ok"></span>';
+          if (ev.sync_status === 'rejected') return '<span class="bad"></span>';
+          if (ev.sync_status === 'needs_review') return '<span class="warn"></span>';
+          return '<span class="ok"></span>';
+        }).join('');
+
+        let statusBadge = `<span class="badge badge-neutral">Scheduled</span>`;
+        if (latest) {
+          if (latest.sync_status === 'rejected') {
+            statusBadge = `<span class="badge badge-danger">● ${esc(latest.rejection_code || 'Rejected')}</span>`;
+          } else if (latest.sync_status === 'needs_review') {
+            statusBadge = `<span class="badge badge-lime">Waiting on you</span>`;
+          } else {
+            statusBadge = `<span class="badge badge-success">● Healthy</span>`;
+          }
+        }
+
+        return `
+          <div class="pulse-row">
+            <div>
+              <div class="pulse-title">${esc(empName)}</div>
+              <div class="pulse-sub">${esc(row.employee.employee_code || '')} · ${esc(wpName)}</div>
+            </div>
+            <div class="barcode-strip" aria-hidden="true">${ticks}</div>
+            <div>${statusBadge}</div>
+          </div>
+        `;
+      })
+      .join('');
+  }
+
+  function renderNeedsYouQueue(overviewData, leavesData, devicesData) {
+    const queueEl = document.getElementById('needs-you-queue');
+    const countBadge = document.getElementById('needs-you-count');
+    const bellDot = document.getElementById('header-bell-dot');
+    const navExcBadge = document.getElementById('nav-badge-exceptions');
+    const navLvBadge = document.getElementById('nav-badge-leaves');
+    if (!queueEl) return;
+
+    const items = [];
+
+    for (const ev of (overviewData && overviewData.recentEvents) || []) {
+      if (['needs_review', 'pending'].includes(ev.sync_status)) {
+        const empName = state.lang === 'ar' ? ev.full_name_ar : ev.full_name_en;
+        items.push({
+          kind: 'attendance',
+          id: ev.id,
+          ref: ev.employee_code || 'ATT',
+          time: new Date(ev.server_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          title: `${t('evt_' + ev.event_type)} — ${empName}`,
+          sub: ev.rejection_reason || ev.flags_json || 'Offline / flagged biometric or location review',
+        });
+      }
+    }
+
+    for (const lv of (leavesData && leavesData.leaveRequests) || []) {
+      if (lv.status === 'pending') {
+        const empName = state.lang === 'ar' ? lv.full_name_ar : lv.full_name_en;
+        items.push({
+          kind: 'leave',
+          id: lv.id,
+          ref: `LV-${lv.days_count}d`,
+          time: lv.start_date,
+          title: `${lv.leave_type.toUpperCase()} · ${empName}`,
+          sub: `${lv.start_date} → ${lv.end_date} · ${lv.reason || ''}`,
+        });
+      }
+    }
+
+    for (const dev of (devicesData && devicesData.devices) || []) {
+      if (dev.status === 'pending') {
+        const empName = state.lang === 'ar' ? dev.full_name_ar : dev.full_name_en;
+        items.push({
+          kind: 'device',
+          id: dev.id,
+          ref: 'DEV',
+          time: 'New',
+          title: `Device · ${empName}`,
+          sub: `${dev.device_model} (${dev.device_identifier})`,
+        });
+      }
+    }
+
+    state.pendingQueueItems = items;
+    if (countBadge) countBadge.textContent = String(items.length);
+    if (bellDot) bellDot.classList.toggle('hidden', items.length === 0);
+
+    const attPending = items.filter((i) => i.kind === 'attendance').length;
+    const lvPending = items.filter((i) => i.kind === 'leave').length;
+    if (navExcBadge) {
+      navExcBadge.textContent = String(attPending);
+      navExcBadge.classList.toggle('hidden', attPending === 0);
+    }
+    if (navLvBadge) {
+      navLvBadge.textContent = String(lvPending);
+      navLvBadge.classList.toggle('hidden', lvPending === 0);
+    }
+
+    if (!items.length) {
+      queueEl.innerHTML = `<div class="alert alert-success" style="margin-bottom:0.5rem;">${esc(t('noPendingDecisions'))}</div>`;
+      return;
+    }
+
+    const canDecide = state.user && ['company_owner', 'hr_admin', 'branch_manager', 'supervisor'].includes(state.user.role);
+
+    queueEl.innerHTML = items
+      .slice(0, 4)
+      .map(
+        (item, idx) => `
+      <div class="decision-item" data-queue-idx="${idx}">
+        <div class="decision-meta">
+          <span>#${esc(item.ref)}</span>
+          <span>${esc(item.time)}</span>
+        </div>
+        <div class="decision-title">${esc(item.title)}</div>
+        <div class="decision-sub">${esc(item.sub)}</div>
+        ${
+          canDecide
+            ? `<div class="decision-actions">
+                <button type="button" class="btn-approve-pill" data-q-kind="${item.kind}" data-q-id="${item.id}" data-q-act="approve">
+                  ${esc(t('approveKeyBtn'))} <span class="kbd-hint">↵</span>
+                </button>
+                <button type="button" class="btn-decline-pill" data-q-kind="${item.kind}" data-q-id="${item.id}" data-q-act="reject">
+                  ${esc(t('declineKeyBtn'))} <span class="kbd-hint">Esc</span>
+                </button>
+              </div>`
+            : ''
+        }
+      </div>
+    `
+      )
+      .join('');
+
+    queueEl.querySelectorAll('[data-q-id]').forEach((btn) => {
+      btn.addEventListener('click', () =>
+        executeDecisionItem(
+          btn.getAttribute('data-q-kind'),
+          btn.getAttribute('data-q-id'),
+          btn.getAttribute('data-q-act')
+        )
+      );
+    });
+  }
+
+  async function executeDecisionItem(kind, id, action) {
+    let res;
+    if (kind === 'attendance') {
+      res = await apiFetch('/api/attendance/review', {
+        method: 'POST',
+        body: JSON.stringify({ eventId: id, decision: action, notes: `Decided from Needs You queue (${action})` }),
+      });
+    } else if (kind === 'leave') {
+      res = await apiFetch('/api/leaves/decide', {
+        method: 'POST',
+        body: JSON.stringify({ leaveId: id, decision: action }),
+      });
+    } else if (kind === 'device') {
+      res = await apiFetch('/api/devices/status', {
+        method: 'POST',
+        body: JSON.stringify({ deviceId: id, status: action === 'approve' ? 'approved' : 'revoked' }),
+      });
+    }
+
+    if (res && res.ok) {
+      showAlert(`Decision recorded (${action}).`, 'success');
+      loadOverview();
+    } else if (res) {
+      showAlert(res.data.message || 'Action failed', 'danger');
+    }
+  }
+
   async function loadOverview() {
     if (state.user.role === 'platform_super_admin') {
       switchTab('subscription');
       return;
     }
-    const { ok, data } = await apiFetch('/api/dashboard/overview');
-    if (!ok) return;
+
+    const [ovRes, lvRes, devRes, empRes, refRes] = await Promise.all([
+      apiFetch('/api/dashboard/overview'),
+      apiFetch('/api/leaves').catch(() => ({ ok: false })),
+      apiFetch('/api/devices').catch(() => ({ ok: false })),
+      apiFetch('/api/employees').catch(() => ({ ok: false })),
+      apiFetch('/api/reference-data').catch(() => ({ ok: false })),
+    ]);
+
+    if (!ovRes.ok) return;
+    const data = ovRes.data;
+    state.lastOverviewData = data;
+    state.lastEmployeesData = empRes.ok ? empRes.data.employees || [] : [];
+
+    // Populate Sidebar Tenant, Branches & Live Telemetry
+    if (data.company) {
+      state.company = data.company;
+      setText('sidebar-company-name', state.lang === 'ar' ? data.company.name_ar : data.company.name_en);
+      setText('ops-chrome-tenant', `${data.company.country_code || 'EG'} · ${data.company.timezone || 'Africa/Cairo'}`);
+    }
 
     const m = data.metrics;
+    setText('live-present-count', String(m.presentCount));
+    setText('live-late-count', String(m.pendingExceptions));
+    setText('live-alert-count', String(m.suspiciousOrRejected));
+    setText('nav-badge-employees', String(m.totalEmployees));
+
+    if (refRes.ok && refRes.data.branches) {
+      state.referenceData = refRes.data;
+      const brTree = document.getElementById('sidebar-branches-tree');
+      if (brTree) {
+        brTree.innerHTML = refRes.data.branches
+          .map((b) => {
+            const bName = state.lang === 'ar' ? b.name_ar : b.name_en;
+            return `<button type="button" class="side-branch-btn" data-branch-jump="${esc(b.id)}"><span>📁 ${esc(bName)}</span><span style="color:var(--text-muted);font-size:0.72rem;">${esc(b.code)}</span></button>`;
+          })
+          .join('');
+        brTree.querySelectorAll('[data-branch-jump]').forEach((btn) => {
+          btn.addEventListener('click', () => switchTab('attendance'));
+        });
+      }
+    }
+
+    // Populate Hero Left Column Metrics
+    const events = data.recentEvents || [];
+    const verifiedBio = events.filter((e) => e.biometric_verified).length;
+    const bioRate = events.length ? `${Math.round((verifiedBio / events.length) * 100)}%` : '—';
+    const distEvents = events.filter((e) => typeof e.calculated_distance_meters === 'number');
+    const avgDist = distEvents.length
+      ? `${Math.round(distEvents.reduce((acc, e) => acc + e.calculated_distance_meters, 0) / distEvents.length)} m`
+      : '—';
+    const acceptedCount = events.filter((e) => e.sync_status === 'accepted').length;
+
+    setText('hero-total-runs', String(events.length));
+    setText('hero-trend-badge', `${acceptedCount}/${events.length || 0} ${t('legVerified')}`);
+    setText('hero-trend-note', `${m.presentCount}/${m.totalEmployees} ${t('opsLivePresent')}`);
+    setText('hero-kv-bio-val', bioRate);
+    setText('hero-kv-dist-val', avgDist);
+    setText('hero-kv-peak-val', events.length ? new Date(events[0].server_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '09:00');
+
+    const insightEl = document.getElementById('hero-insight-text');
+    if (insightEl) {
+      if (m.suspiciousOrRejected > 0 || m.pendingExceptions > 0 || m.pendingLeaves > 0) {
+        insightEl.innerHTML =
+          state.lang === 'ar'
+            ? `<strong>${m.pendingExceptions + m.pendingLeaves} عناصر بانتظار قرارك</strong> · تم رصد <strong>${m.suspiciousOrRejected} محاولات مرفوضة/خارج السياج</strong>.`
+            : `<strong>${m.pendingExceptions + m.pendingLeaves} items waiting on your decision</strong> · <strong>${m.suspiciousOrRejected} outside-geofence or flagged attempts</strong> recorded.`;
+      } else {
+        insightEl.innerHTML =
+          state.lang === 'ar'
+            ? `<strong>جميع عمليات الحضور مستقرة</strong> · نسبة الامتثال الجغرافي والحيوي مكتملة.`
+            : `<strong>All attendance streams healthy</strong> · Geofence and biometric checks verified.`;
+      }
+    }
+
+    // Render Hero SVG Chart, Pulse Streams, and Needs You Queue
+    renderHeroChart(state.chartMode, events);
+    renderWorkflowsPulse(events, state.lastEmployeesData);
+    renderNeedsYouQueue(data, lvRes.ok ? lvRes.data : null, devRes.ok ? devRes.data : null);
+
+    // Render Compact KPI Strip
     const kpiContainer = document.getElementById('overview-kpis');
     kpiContainer.innerHTML = `
       <div class="kpi-card"><div class="kpi-label">${t('kpiTotalEmployees')}</div><div class="kpi-value">${m.totalEmployees}</div></div>
-      <div class="kpi-card"><div class="kpi-label">${t('kpiPresent')}</div><div class="kpi-value" style="color:#166534;">${m.presentCount}</div></div>
+      <div class="kpi-card"><div class="kpi-label">${t('kpiPresent')}</div><div class="kpi-value" style="color:#1a4715;">${m.presentCount}</div></div>
       <div class="kpi-card"><div class="kpi-label">${t('kpiAbsent')}</div><div class="kpi-value" style="color:#991b1b;">${m.absentCount}</div></div>
       <div class="kpi-card"><div class="kpi-label">${t('kpiLate')}</div><div class="kpi-value" style="color:#854d0e;">${m.lateCount}</div></div>
       <div class="kpi-card"><div class="kpi-label">${t('kpiExceptions')}</div><div class="kpi-value" style="color:#b45309;">${m.pendingExceptions}</div></div>
@@ -184,11 +752,16 @@
       <div class="kpi-card"><div class="kpi-label">${t('kpiPendingLeaves')}</div><div class="kpi-value">${m.pendingLeaves}</div></div>
     `;
 
+    // Render Detailed Recent Events Table
     const tbody = document.getElementById('tbody-recent-events');
     tbody.innerHTML = '';
-    for (const evt of data.recentEvents || []) {
-      const tr = document.createElement('tr');
+    const q = state.searchQuery.trim().toLowerCase();
+    for (const evt of events) {
       const empName = state.lang === 'ar' ? evt.full_name_ar : evt.full_name_en;
+      if (q && !`${empName} ${evt.employee_code} ${evt.workplace_name_en || ''}`.toLowerCase().includes(q)) {
+        continue;
+      }
+      const tr = document.createElement('tr');
       const wpName = state.lang === 'ar' ? evt.workplace_name_ar || '-' : evt.workplace_name_en || '-';
       const distText =
         typeof evt.calculated_distance_meters === 'number'
@@ -207,16 +780,16 @@
         ['needs_review', 'pending'].includes(evt.sync_status);
 
       tr.innerHTML = `
-        <td><strong>${empName}</strong><br/><small>${evt.employee_code}</small></td>
+        <td><strong>${esc(empName)}</strong><br/><small>${esc(evt.employee_code)}</small></td>
         <td>${t('evt_' + evt.event_type)}</td>
         <td><small>${new Date(evt.server_timestamp).toLocaleString(state.lang === 'ar' ? 'ar-EG' : 'en-GB')}</small></td>
-        <td>${wpName}</td>
+        <td>${esc(wpName)}</td>
         <td>${distText} ${evt.geofence_passed ? '✅' : '❌'}</td>
         <td>${renderBiometricBadge(evt)}</td>
         <td>
           ${renderSyncStatusBadge(evt.sync_status)}
-          ${evt.rejection_reason ? `<div style="font-size:0.74rem;color:#991b1b;margin-top:0.2rem;">${evt.rejection_reason}</div>` : ''}
-          ${flagsList.length ? `<div style="font-size:0.72rem;color:#854d0e;">⚠️ ${flagsList.join(', ')}</div>` : ''}
+          ${evt.rejection_reason ? `<div style="font-size:0.74rem;color:#991b1b;margin-top:0.2rem;">${esc(evt.rejection_reason)}</div>` : ''}
+          ${flagsList.length ? `<div style="font-size:0.72rem;color:#854d0e;">⚠️ ${esc(flagsList.join(', '))}</div>` : ''}
         </td>
         <td>
           ${
@@ -271,11 +844,11 @@
       : '-';
 
     summaryEl.innerHTML = `
-      <div><strong>Shift / الوردية:</strong> ${shiftName} | <strong>Current State / الحالة الحالية:</strong> <span class="badge badge-info">${data.todayRecord.current_state}</span></div>
+      <div><strong>Shift / الوردية:</strong> ${esc(shiftName)} | <strong>Current State / الحالة الحالية:</strong> <span class="badge badge-info">${esc(data.todayRecord.current_state)}</span></div>
       <div style="margin-top:0.25rem;"><strong>Biometric Policy:</strong> ${
         data.employee.allow_biometric_exception
-          ? `<span class="badge badge-warn">HR Exception Enabled (${data.employee.biometric_exception_reason || ''})</span>`
-          : `<span class="badge badge-success">Strict OS Biometric Required</span>`
+          ? `<span class="badge badge-warn">HR Exception Enabled (${esc(data.employee.biometric_exception_reason || '')})</span>`
+          : `<span class="badge badge-lime">Strict OS Biometric Required</span>`
       }</div>
     `;
 
@@ -283,7 +856,7 @@
     for (const wp of state.workplaces) {
       const opt = document.createElement('option');
       opt.value = wp.id;
-      opt.textContent = `${ state.lang === 'ar' ? wp.name_ar : wp.name_en } (Radius: ${wp.radius_meters}m)`;
+      opt.textContent = `${state.lang === 'ar' ? wp.name_ar : wp.name_en} (Radius: ${wp.radius_meters}m)`;
       wpSelect.appendChild(opt);
     }
 
@@ -339,11 +912,10 @@
         latitude: Number((wp.latitude + 0.0001).toFixed(6)),
         longitude: Number((wp.longitude + 0.0001).toFixed(6)),
         accuracyMeters: 14.0,
-        locationTimestamp: new Date(nowMs - 360000).toISOString(), // 6 minutes old
+        locationTimestamp: new Date(nowMs - 360000).toISOString(),
         isMockLocation: false,
       };
     }
-    // mock location
     return {
       workplaceId: wp.id,
       latitude: wp.latitude,
@@ -417,7 +989,6 @@
         devicePlatform: 'android',
       };
     }
-    // shared_device (using Mahmoud's registered device while logged in as someone else)
     return {
       osAuthenticated: true,
       authMethod: 'biometric_strong',
@@ -485,15 +1056,15 @@
       const v = data.verificationSummary || {};
       resultBox.innerHTML = `
         <div class="alert alert-success">
-          ✅ <strong>${data.code}:</strong> ${data.message}<br/>
-          <small>Server Timestamp: <code>${v.serverTimestamp}</code> | Distance: <code>${v.distanceMeters}m / ${v.permittedRadiusMeters}m</code> | Biometric Verified: <code>${v.biometricVerified}</code> | Status: <code>${v.syncStatus}</code></small>
+          ✅ <strong>${esc(data.code)}:</strong> ${esc(data.message)}<br/>
+          <small>Server Timestamp: <code>${esc(v.serverTimestamp)}</code> | Distance: <code>${v.distanceMeters}m / ${v.permittedRadiusMeters}m</code> | Biometric Verified: <code>${v.biometricVerified}</code> | Status: <code>${esc(v.syncStatus)}</code></small>
         </div>
       `;
       loadMobileAttendanceContext();
     } else {
       resultBox.innerHTML = `
         <div class="alert alert-danger">
-          ❌ <strong>Rejected (${data.code}):</strong> ${data.message}
+          ❌ <strong>Rejected (${esc(data.code)}):</strong> ${esc(data.message)}
         </div>
       `;
     }
@@ -542,16 +1113,16 @@
       const tr = document.createElement('tr');
       const empName = state.lang === 'ar' ? r.full_name_ar : r.full_name_en;
       tr.innerHTML = `
-        <td>${r.attendance_date}</td>
-        <td><strong>${empName}</strong> (${r.employee_code})</td>
-        <td>${state.lang === 'ar' ? r.branch_name_ar || '-' : r.branch_name_en || '-'}</td>
+        <td>${esc(r.attendance_date)}</td>
+        <td><strong>${esc(empName)}</strong> (${esc(r.employee_code)})</td>
+        <td>${esc(state.lang === 'ar' ? r.branch_name_ar || '-' : r.branch_name_en || '-')}</td>
         <td><small>${r.first_check_in_at ? new Date(r.first_check_in_at).toLocaleTimeString() : '-'}</small></td>
         <td><small>${r.last_check_out_at ? new Date(r.last_check_out_at).toLocaleTimeString() : '-'}</small></td>
-        <td><code>${r.current_state}</code></td>
+        <td><code>${esc(r.current_state)}</code></td>
         <td>${r.late_minutes}</td>
         <td>${r.overtime_minutes}</td>
-        <td><span class="badge ${r.status === 'present' ? 'badge-success' : r.status === 'late' ? 'badge-warn' : 'badge-danger'}">${r.status}</span></td>
-        <td><small>${r.exception_notes || '-'}</small></td>
+        <td><span class="badge ${r.status === 'present' ? 'badge-lime' : r.status === 'late' ? 'badge-warn' : 'badge-danger'}">${esc(r.status)}</span></td>
+        <td><small>${esc(r.exception_notes || '-')}</small></td>
       `;
       tbody.appendChild(tr);
     }
@@ -564,12 +1135,12 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><small>${new Date(c.created_at).toLocaleDateString()}</small></td>
-          <td>${state.lang === 'ar' ? c.full_name_ar : c.full_name_en} (${c.employee_code})</td>
-          <td><code>${c.correction_type}</code></td>
-          <td><small><code>${c.original_value_json}</code></small></td>
-          <td><small><code>${c.corrected_value_json}</code></small></td>
-          <td>${c.reason}</td>
-          <td><small>${c.approver_email || '-'}</small></td>
+          <td>${esc(state.lang === 'ar' ? c.full_name_ar : c.full_name_en)} (${esc(c.employee_code)})</td>
+          <td><code>${esc(c.correction_type)}</code></td>
+          <td><small><code>${esc(c.original_value_json)}</code></small></td>
+          <td><small><code>${esc(c.corrected_value_json)}</code></small></td>
+          <td>${esc(c.reason)}</td>
+          <td><small>${esc(c.approver_email || '-')}</small></td>
         `;
         corrTbody.appendChild(tr);
       }
@@ -587,43 +1158,46 @@
       const brSel = document.getElementById('emp-branch');
       const shSel = document.getElementById('emp-shift');
       brSel.innerHTML = refRes.data.branches
-        .map((b) => `<option value="${b.id}">${state.lang === 'ar' ? b.name_ar : b.name_en}</option>`)
+        .map((b) => `<option value="${b.id}">${esc(state.lang === 'ar' ? b.name_ar : b.name_en)}</option>`)
         .join('');
       shSel.innerHTML = refRes.data.shifts
-        .map((s) => `<option value="${s.id}">${state.lang === 'ar' ? s.name_ar : s.name_en}</option>`)
+        .map((s) => `<option value="${s.id}">${esc(state.lang === 'ar' ? s.name_ar : s.name_en)}</option>`)
         .join('');
     }
     if (wpRes.ok) {
       const wpSel = document.getElementById('emp-workplace');
       wpSel.innerHTML = wpRes.data.workplaces
-        .map((w) => `<option value="${w.id}">${state.lang === 'ar' ? w.name_ar : w.name_en}</option>`)
+        .map((w) => `<option value="${w.id}">${esc(state.lang === 'ar' ? w.name_ar : w.name_en)}</option>`)
         .join('');
     }
     if (!empRes.ok) return;
     state.employeesList = empRes.data.employees || [];
 
-    // Populate manual correction employee dropdown as well
     const corrEmpSel = document.getElementById('corr-employee-id');
     if (corrEmpSel) {
       corrEmpSel.innerHTML = state.employeesList
-        .map((e) => `<option value="${e.id}">${e.employee_code} — ${state.lang === 'ar' ? e.full_name_ar : e.full_name_en}</option>`)
+        .map((e) => `<option value="${e.id}">${esc(e.employee_code)} — ${esc(state.lang === 'ar' ? e.full_name_ar : e.full_name_en)}</option>`)
         .join('');
     }
 
     const tbody = document.getElementById('tbody-employees');
     tbody.innerHTML = '';
+    const q = state.searchQuery.trim().toLowerCase();
     for (const e of state.employeesList) {
+      if (q && !`${e.employee_code} ${e.full_name_en} ${e.full_name_ar} ${e.email || ''}`.toLowerCase().includes(q)) {
+        continue;
+      }
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><strong>${e.employee_code}</strong></td>
-        <td>${e.full_name_ar}<br/><small>${e.full_name_en} (${e.email || ''})</small></td>
-        <td>${state.lang === 'ar' ? e.job_title_ar : e.job_title_en}</td>
-        <td>${state.lang === 'ar' ? e.branch_name_ar || '-' : e.branch_name_en || '-'}</td>
-        <td>${state.lang === 'ar' ? e.workplace_name_ar || '-' : e.workplace_name_en || '-'}</td>
+        <td><strong>${esc(e.employee_code)}</strong></td>
+        <td>${esc(e.full_name_ar)}<br/><small>${esc(e.full_name_en)} (${esc(e.email || '')})</small></td>
+        <td>${esc(state.lang === 'ar' ? e.job_title_ar : e.job_title_en)}</td>
+        <td>${esc(state.lang === 'ar' ? e.branch_name_ar || '-' : e.branch_name_en || '-')}</td>
+        <td>${esc(state.lang === 'ar' ? e.workplace_name_ar || '-' : e.workplace_name_en || '-')}</td>
         <td>${
           e.allow_biometric_exception
             ? `<span class="badge badge-warn">Exception Allowed</span>`
-            : `<span class="badge badge-success">Biometric Strict</span>`
+            : `<span class="badge badge-lime">Biometric Strict</span>`
         }</td>
         <td><span class="badge ${e.is_active ? 'badge-success' : 'badge-danger'}">${e.is_active ? 'Active' : 'Inactive'}</span></td>
         <td>
@@ -661,9 +1235,9 @@
     for (const w of data.workplaces || []) {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><code>${w.code}</code></td>
-        <td><strong>${w.name_ar}</strong><br/><small>${w.name_en}</small></td>
-        <td>${w.workplace_type}</td>
+        <td><code>${esc(w.code)}</code></td>
+        <td><strong>${esc(w.name_ar)}</strong><br/><small>${esc(w.name_en)}</small></td>
+        <td>${esc(w.workplace_type)}</td>
         <td><code>${w.latitude}, ${w.longitude}</code></td>
         <td><strong>${w.radius_meters}m</strong></td>
         <td>${w.max_accuracy_meters}m</td>
@@ -683,13 +1257,13 @@
     for (const lv of data.leaveRequests || []) {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><strong>${state.lang === 'ar' ? lv.full_name_ar : lv.full_name_en}</strong> (${lv.employee_code})</td>
-        <td>${lv.leave_type}</td>
-        <td>${lv.start_date}</td>
-        <td>${lv.end_date}</td>
+        <td><strong>${esc(state.lang === 'ar' ? lv.full_name_ar : lv.full_name_en)}</strong> (${esc(lv.employee_code)})</td>
+        <td>${esc(lv.leave_type)}</td>
+        <td>${esc(lv.start_date)}</td>
+        <td>${esc(lv.end_date)}</td>
         <td>${lv.days_count}</td>
-        <td>${lv.reason || '-'}</td>
-        <td><span class="badge ${lv.status === 'approved' ? 'badge-success' : lv.status === 'rejected' ? 'badge-danger' : 'badge-warn'}">${lv.status}</span></td>
+        <td>${esc(lv.reason || '-')}</td>
+        <td><span class="badge ${lv.status === 'approved' ? 'badge-lime' : lv.status === 'rejected' ? 'badge-danger' : 'badge-warn'}">${esc(lv.status)}</span></td>
         <td>
           ${
             canDecide && lv.status === 'pending'
@@ -732,11 +1306,11 @@
       for (const d of devRes.data.devices || []) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td><strong>${state.lang === 'ar' ? d.full_name_ar : d.full_name_en}</strong> (${d.employee_code})</td>
-          <td><code>${d.device_identifier}</code></td>
-          <td>${d.device_model} (${d.os_version || d.platform})</td>
+          <td><strong>${esc(state.lang === 'ar' ? d.full_name_ar : d.full_name_en)}</strong> (${esc(d.employee_code)})</td>
+          <td><code>${esc(d.device_identifier)}</code></td>
+          <td>${esc(d.device_model)} (${esc(d.os_version || d.platform)})</td>
           <td>HW: ${d.biometric_hardware_available ? '✅' : '❌'} | Enrolled: ${d.biometric_enrolled ? '✅' : '❌'}</td>
-          <td><span class="badge ${d.status === 'approved' ? 'badge-success' : d.status === 'revoked' ? 'badge-danger' : 'badge-warn'}">${d.status}</span></td>
+          <td><span class="badge ${d.status === 'approved' ? 'badge-lime' : d.status === 'revoked' ? 'badge-danger' : 'badge-warn'}">${esc(d.status)}</span></td>
           <td><small>${d.last_used_at ? new Date(d.last_used_at).toLocaleString() : '-'}</small></td>
           <td>
             <button class="btn btn-primary btn-sm" data-dev-id="${d.id}" data-status="approved">Approve</button>
@@ -771,10 +1345,10 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><small>${new Date(log.created_at).toLocaleString()}</small></td>
-          <td><code>${log.actor_role || '-'}</code></td>
-          <td><strong>${log.action}</strong></td>
-          <td>${log.target_type} (${log.target_id || '-'})</td>
-          <td><small><code>${log.details_json}</code></small></td>
+          <td><code>${esc(log.actor_role || '-')}</code></td>
+          <td><strong>${esc(log.action)}</strong></td>
+          <td>${esc(log.target_type)} (${esc(log.target_id || '-')})</td>
+          <td><small><code>${esc(log.details_json)}</code></small></td>
         `;
         tbody.appendChild(tr);
       }
@@ -794,8 +1368,8 @@
         <ul>
           ${(data.tenants || [])
             .map(
-              (t) =>
-                `<li><strong>${t.name_en} (${t.name_ar})</strong> — Plan: ${t.plan_name_en} | Status: <span class="badge badge-success">${t.sub_status}</span> | Expires: ${t.expiry_date}</li>`
+              (tn) =>
+                `<li><strong>${esc(tn.name_en)} (${esc(tn.name_ar)})</strong> — Plan: ${esc(tn.plan_name_en)} | Status: <span class="badge badge-lime">${esc(tn.sub_status)}</span> | Expires: ${esc(tn.expiry_date)}</li>`
             )
             .join('')}
         </ul>
@@ -804,8 +1378,8 @@
       const s = data.subscription;
       box.innerHTML = `
         <div class="form-grid">
-          <div><strong>Plan:</strong> ${state.lang === 'ar' ? s.plan_name_ar : s.plan_name_en} (${s.plan_code})</div>
-          <div><strong>Status:</strong> <span class="badge badge-success">${s.status}</span></div>
+          <div><strong>Plan:</strong> ${esc(state.lang === 'ar' ? s.plan_name_ar : s.plan_name_en)} (${esc(s.plan_code)})</div>
+          <div><strong>Status:</strong> <span class="badge badge-lime">${esc(s.status)}</span></div>
           <div><strong>Expiry Date:</strong> ${new Date(s.expiry_date).toLocaleDateString()} (Grace Period: ${s.grace_period_days} days)</div>
           <div><strong>Limits:</strong> Max ${s.max_employees} Employees | Max ${s.max_workplaces} Workplaces | Max ${s.max_branches} Branches</div>
         </div>
@@ -817,10 +1391,10 @@
       const canVerify = state.user.role === 'platform_super_admin' && p.verification_status === 'pending';
       tr.innerHTML = `
         <td><small>${new Date(p.created_at).toLocaleDateString()}</small></td>
-        <td><strong>${p.amount} ${p.currency}</strong></td>
-        <td><code>${p.payment_method}</code></td>
-        <td><code>${p.reference_number}</code></td>
-        <td><span class="badge ${p.verification_status === 'verified' ? 'badge-success' : 'badge-warn'}">${p.verification_status}</span></td>
+        <td><strong>${p.amount} ${esc(p.currency)}</strong></td>
+        <td><code>${esc(p.payment_method)}</code></td>
+        <td><code>${esc(p.reference_number)}</code></td>
+        <td><span class="badge ${p.verification_status === 'verified' ? 'badge-lime' : 'badge-warn'}">${esc(p.verification_status)}</span></td>
         <td>
           ${
             canVerify
@@ -851,9 +1425,13 @@
     document.querySelectorAll('.nav-tab').forEach((btn) => {
       btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName);
     });
+    document.querySelectorAll('.rail-btn[data-rail-tab]').forEach((btn) => {
+      btn.classList.toggle('active', btn.getAttribute('data-rail-tab') === tabName);
+    });
     document.querySelectorAll('.tab-pane').forEach((pane) => {
       pane.classList.toggle('hidden', pane.id !== `tab-${tabName}`);
     });
+    updateMainHeaderMeta(tabName);
 
     if (tabName === 'overview') loadOverview();
     if (tabName === 'mobile') loadMobileAttendanceContext();
@@ -881,7 +1459,21 @@
     badge.classList.remove('hidden');
     badge.textContent = `${state.user.email} (${state.user.role})`;
 
-    // Default tab based on role
+    const displayName = state.employee
+      ? (state.lang === 'ar' ? state.employee.full_name_ar : state.employee.full_name_en)
+      : state.user.email;
+    setText('sidebar-user-name', displayName);
+    setText('sidebar-user-role', state.user.role);
+    setText(
+      'sidebar-user-initials',
+      String(displayName || 'HR')
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((p) => p[0] || '')
+        .join('')
+        .toUpperCase() || 'HR'
+    );
+
     if (state.user.role === 'employee') {
       switchTab('mobile');
     } else if (state.user.role === 'platform_super_admin') {
@@ -891,8 +1483,7 @@
     }
   }
 
-  // Event Listeners
-  document.getElementById('btn-lang-toggle').addEventListener('click', () => {
+  function toggleLanguage() {
     state.lang = state.lang === 'ar' ? 'en' : 'ar';
     localStorage.setItem('wehr_lang', state.lang);
     applyLocalization();
@@ -901,7 +1492,12 @@
       const activeTab = document.querySelector('.nav-tab.active');
       if (activeTab) switchTab(activeTab.getAttribute('data-tab'));
     }
-  });
+  }
+
+  // Event Listeners
+  document.getElementById('btn-lang-toggle').addEventListener('click', toggleLanguage);
+  const railLangBtn = document.getElementById('btn-rail-lang');
+  if (railLangBtn) railLangBtn.addEventListener('click', toggleLanguage);
 
   document.getElementById('btn-logout').addEventListener('click', () => {
     state.token = null;
@@ -925,7 +1521,6 @@
       showAlert(data.message || 'Sign in failed', 'danger');
       return;
     }
-    // Platform admins manage everything from the separate admin console
     if (data.user.role === 'platform_super_admin') {
       localStorage.setItem('wehr_admin_token', data.token);
       window.location.href = '/admin';
@@ -939,6 +1534,114 @@
   document.querySelectorAll('.nav-tab').forEach((btn) => {
     btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
   });
+
+  document.querySelectorAll('.rail-btn[data-rail-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => switchTab(btn.getAttribute('data-rail-tab')));
+  });
+
+  document.querySelectorAll('.chart-mode-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.getAttribute('data-chart-mode') === state.chartMode);
+    btn.addEventListener('click', () => {
+      state.chartMode = btn.getAttribute('data-chart-mode');
+      localStorage.setItem('wehr_chart_mode', state.chartMode);
+      document.querySelectorAll('.chart-mode-btn').forEach((b) =>
+        b.classList.toggle('active', b.getAttribute('data-chart-mode') === state.chartMode)
+      );
+      if (state.lastOverviewData) {
+        renderHeroChart(state.chartMode, state.lastOverviewData.recentEvents || []);
+      }
+    });
+  });
+
+  document.querySelectorAll('.pulse-filter-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.pulseFilter = btn.getAttribute('data-pulse-filter');
+      document.querySelectorAll('.pulse-filter-btn').forEach((b) =>
+        b.classList.toggle('active', b.getAttribute('data-pulse-filter') === state.pulseFilter)
+      );
+      if (state.lastOverviewData) {
+        renderWorkflowsPulse(state.lastOverviewData.recentEvents || [], state.lastEmployeesData);
+      }
+    });
+  });
+
+  document.querySelectorAll('#ops-range-switcher button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.range = btn.getAttribute('data-range');
+      document.querySelectorAll('#ops-range-switcher button').forEach((b) =>
+        b.classList.toggle('active', b.getAttribute('data-range') === state.range)
+      );
+      loadOverview();
+    });
+  });
+
+  const quickSearchEl = document.getElementById('ops-quick-search');
+  if (quickSearchEl) {
+    quickSearchEl.addEventListener('input', () => {
+      state.searchQuery = quickSearchEl.value;
+      const activeTab = document.querySelector('.nav-tab.active');
+      const tabName = activeTab ? activeTab.getAttribute('data-tab') : 'overview';
+      if (tabName === 'overview' && state.lastOverviewData) {
+        loadOverview();
+      } else if (tabName === 'employees') {
+        loadEmployeesTab();
+      }
+    });
+  }
+
+  document.addEventListener('keydown', (ev) => {
+    if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'k') {
+      if (quickSearchEl && !document.getElementById('view-workspace').classList.contains('hidden')) {
+        ev.preventDefault();
+        quickSearchEl.focus();
+      }
+    }
+  });
+
+  const needsYouCard = document.getElementById('needs-you-card');
+  if (needsYouCard) {
+    needsYouCard.setAttribute('tabindex', '-1');
+    needsYouCard.addEventListener('keydown', (ev) => {
+      if (!state.pendingQueueItems.length) return;
+      const top = state.pendingQueueItems[0];
+      if (ev.key === 'Enter' && ev.target.tagName !== 'BUTTON') {
+        ev.preventDefault();
+        executeDecisionItem(top.kind, top.id, 'approve');
+      } else if (ev.key === 'Escape') {
+        ev.preventDefault();
+        executeDecisionItem(top.kind, top.id, 'reject');
+      }
+    });
+  }
+
+  const headerRecordBtn = document.getElementById('btn-header-record-attendance');
+  if (headerRecordBtn) headerRecordBtn.addEventListener('click', () => switchTab('mobile'));
+  const heroRegTopBtn = document.getElementById('btn-hero-open-register-top');
+  if (heroRegTopBtn) heroRegTopBtn.addEventListener('click', () => switchTab('attendance'));
+  const heroRegBtn = document.getElementById('btn-hero-open-register');
+  if (heroRegBtn) heroRegBtn.addEventListener('click', () => switchTab('attendance'));
+  const pulseAllBtn = document.getElementById('btn-pulse-all-link');
+  if (pulseAllBtn) pulseAllBtn.addEventListener('click', () => switchTab('employees'));
+  const openFullQueueBtn = document.getElementById('btn-open-full-queue');
+  if (openFullQueueBtn) openFullQueueBtn.addEventListener('click', () => switchTab('attendance'));
+  const heroFocusQueueBtn = document.getElementById('btn-hero-focus-queue');
+  if (heroFocusQueueBtn) {
+    heroFocusQueueBtn.addEventListener('click', () => {
+      if (needsYouCard) {
+        needsYouCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        needsYouCard.focus();
+      }
+    });
+  }
+  const headerBellBtn = document.getElementById('btn-header-bell');
+  if (headerBellBtn) {
+    headerBellBtn.addEventListener('click', () => {
+      switchTab('overview');
+      if (needsYouCard) {
+        needsYouCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  }
 
   document.getElementById('btn-refresh-overview').addEventListener('click', loadOverview);
 
