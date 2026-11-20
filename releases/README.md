@@ -13,5 +13,6 @@ Every website and Android app version, newest last. The live website (https://we
 | v1.3 | 2026-11-02 | `WeHR-web-v1.3.zip` | (same as v1.1) | Admin console at `/admin`: companies, users, branches, workplaces, shifts, devices, payments, audit log. |
 | v1.4 | 2026-11-02 | `WeHR-web-v1.4.zip` | `WeHR-v1.4.apk` | Admin mode inside the app (opens the same admin console). |
 | v2.0 | 2026-11-03 | `WeHR-web-v2.0.zip` | `WeHR-v2.0.apk` | One web app for website and phone: same sign-in, check-in and admin screens everywhere. The app opens the website and adds phone GPS and fingerprint, so website updates reach the app without reinstalling. |
+| v2.1 | 2026-11-20 | `WeHR-web-v2.1.zip` | `WeHR-v2.1.apk` | Settigation / Fieldnote decision-first tactile UI redesign (3-mode chart, 24-tick barcode pulse strips, `Needs you` approval queue), branded We HR App Loading screen (`_wakeServerAndLoad`), and production Render keep-alive pinger. |
 
 Apps v1.1 and later point to https://we-hr.onrender.com. Versions before v2.0 have their own built-in screens, so they don't get the website's newer features.
