@@ -306,9 +306,23 @@
       .filter(Boolean)
       .join(' · ');
     const current = todayRecord.current_state || 'not_checked_in';
-    const stateKind = { checked_in: 'success', on_break: 'warn', checked_out: 'info' }[current] || 'danger';
+    const stateKind = { checked_in: 'lime', on_break: 'warn', checked_out: 'info' }[current] || 'neutral';
     $('emp-state').className = `badge badge-${stateKind}`;
     $('emp-state').textContent = t('state_' + current);
+
+    const barcodeEl = $('emp-barcode-strip');
+    if (barcodeEl) {
+      const evs = recentEvents || [];
+      barcodeEl.innerHTML = Array.from({ length: 24 }, (_, idx) => {
+        if (!evs.length || idx < 24 - Math.min(20, evs.length * 4)) return '<span></span>';
+        const ev = evs[idx % evs.length];
+        if (!ev) return '<span class="ok"></span>';
+        if (ev.sync_status === 'rejected') return '<span class="bad"></span>';
+        if (ev.sync_status === 'needs_review' || ev.sync_status === 'pending') return '<span class="warn"></span>';
+        return '<span class="ok"></span>';
+      }).join('');
+    }
+    updateEmpClock();
 
     const allowed = ALLOWED_EVENTS[current] || [];
     document.querySelectorAll('[data-event]').forEach((b) => (b.disabled = state.busy || !allowed.includes(b.dataset.event)));
@@ -490,6 +504,13 @@
     }
   }
 
+  function updateEmpClock() {
+    const el = $('emp-live-clock');
+    if (!el) return;
+    const now = new Date();
+    el.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  }
+
   // --------------------------------------------------------------------------
   // Wiring
   // --------------------------------------------------------------------------
@@ -502,6 +523,8 @@
     applyLanguage();
   });
 
+  updateEmpClock();
+  setInterval(updateEmpClock, 15000);
   applyLanguage();
   restoreSession();
 })();

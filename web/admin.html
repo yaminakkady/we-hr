@@ -3,62 +3,164 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#ECEEF2" />
   <meta name="robots" content="noindex, nofollow" />
   <title>We HR Admin Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="/admin.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand-wrap">
-      <div class="brand-logo">We</div>
-      <div>
-        <h1 class="brand-title" data-i18n="appTitle"></h1>
-        <p class="brand-subtitle" data-i18n="appTagline"></p>
-      </div>
-    </div>
-    <div class="topbar-actions">
-      <span id="admin-user-badge" class="badge badge-info hidden"></span>
-      <a class="btn btn-outline" href="/hr" data-i18n="hrDashboardLink"></a>
-      <button type="button" class="btn btn-outline" id="btn-lang"></button>
-      <button type="button" class="btn btn-outline hidden" id="btn-logout" data-i18n="signOut"></button>
-    </div>
-  </header>
-
-  <main class="container">
+  <main>
     <div id="toast" class="alert hidden" role="status" aria-live="polite"></div>
 
-    <!-- LOGIN -->
-    <section id="view-login" class="login-card card">
-      <h2 data-i18n="loginTitle"></h2>
-      <p class="muted" data-i18n="loginHint"></p>
-      <form id="form-login">
-        <div class="form-group">
-          <label for="login-user" data-i18n="username"></label>
-          <input id="login-user" class="form-control" autocomplete="username" autocapitalize="none" spellcheck="false" required />
+    <!-- LOGIN SHELL (LIGHT FROSTED HEADER + CLEAN SIGN-IN CARD) -->
+    <div id="admin-login-wrap" class="login-shell">
+      <header class="login-topbar">
+        <div class="brand-wrap">
+          <div class="brand-logo">We</div>
+          <div style="min-width:0;">
+            <h1 class="brand-title" data-i18n="appTitle"></h1>
+            <p class="brand-subtitle" data-i18n="appTagline"></p>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="login-pass" data-i18n="password"></label>
-          <input id="login-pass" type="password" class="form-control" autocomplete="current-password" required />
+        <div class="topbar-actions">
+          <a class="btn btn-secondary btn-sm" href="/hr" data-i18n="hrDashboardLink"></a>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-login-lang"></button>
         </div>
-        <button type="submit" class="btn btn-primary btn-block" data-i18n="signIn"></button>
-      </form>
-    </section>
+      </header>
 
-    <!-- CONSOLE -->
-    <section id="view-console" class="admin-layout hidden">
-      <nav class="admin-nav" id="admin-nav" aria-label="Admin sections">
-        <button type="button" data-section="overview"></button>
-        <button type="button" data-section="companies"></button>
-        <button type="button" data-section="users"></button>
-        <button type="button" data-section="branches"></button>
-        <button type="button" data-section="workplaces"></button>
-        <button type="button" data-section="shifts"></button>
-        <button type="button" data-section="devices"></button>
-        <button type="button" data-section="payments"></button>
-        <button type="button" data-section="audit"></button>
-      </nav>
-      <div class="admin-main" id="admin-main"></div>
+      <section id="view-login" class="login-card admin-login-box">
+        <h2 style="margin-top:0;font-weight:600;letter-spacing:-0.02em;" data-i18n="loginTitle"></h2>
+        <p class="muted" data-i18n="loginHint"></p>
+        <form id="form-login">
+          <div class="form-group">
+            <label for="login-user" data-i18n="username"></label>
+            <input id="login-user" class="form-control" autocomplete="username" autocapitalize="none" spellcheck="false" required />
+          </div>
+          <div class="form-group">
+            <label for="login-pass" data-i18n="password"></label>
+            <input id="login-pass" type="password" class="form-control" autocomplete="current-password" required />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" data-i18n="signIn"></button>
+        </form>
+      </section>
+    </div>
+
+    <!-- PLATFORM CONSOLE (3-COLUMN FIELDNOTE OPS WORKSPACE) -->
+    <section id="view-console" class="ops-stage hidden">
+      <div class="ops-grid">
+        <!-- 1. FLOATING OBSIDIAN ICON RAIL -->
+        <aside class="ops-rail-col" aria-label="Admin rail">
+          <div class="ops-rail">
+            <div class="rail-brand-mark" title="We HR Admin">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/></svg>
+            </div>
+            <button type="button" class="rail-btn active" data-admin-rail="overview" title="Overview">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+            </button>
+            <button type="button" class="rail-btn" data-admin-rail="companies" title="Companies">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 21h18"/><path d="M5 21V5l7-2v18"/><path d="M19 21V9l-7-2"/></svg>
+            </button>
+            <button type="button" class="rail-btn" data-admin-rail="users" title="Users & Access">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><circle cx="19" cy="11" r="2"/></svg>
+            </button>
+            <button type="button" class="rail-btn" data-admin-rail="branches" title="Branches">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            </button>
+            <button type="button" class="rail-btn" data-admin-rail="workplaces" title="Workplaces">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+            </button>
+            <button type="button" class="rail-btn" data-admin-rail="shifts" title="Shifts">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+            </button>
+            <button type="button" class="rail-btn" data-admin-rail="devices" title="Devices">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="6" y="2" width="12" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+            </button>
+            <button type="button" class="rail-btn" data-admin-rail="payments" title="Payments">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            </button>
+            <button type="button" class="rail-btn" data-admin-rail="audit" title="Audit Log">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </button>
+          </div>
+
+          <div class="rail-timeline-strip" aria-hidden="true">
+            <span class="rail-24h-label">SYS</span>
+            <div class="rail-24h-ticks">
+              <span class="major"></span><span></span><span class="active"></span><span></span>
+              <span class="major"></span><span class="now"></span><span></span><span class="active"></span>
+              <span class="major"></span><span></span><span></span><span class="major"></span>
+            </div>
+            <div class="rail-vertical-title">ADMIN · OPS CONSOLE</div>
+          </div>
+
+          <div class="rail-bottom-pill">
+            <button type="button" class="rail-btn" id="btn-admin-rail-lang" title="Switch Language / تغيير اللغة">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </button>
+            <button type="button" class="rail-btn" id="btn-admin-rail-logout" title="Sign Out / تسجيل الخروج">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </button>
+          </div>
+        </aside>
+
+        <!-- 2. FROSTED GLASS ADMIN SIDEBAR -->
+        <aside class="ops-sidebar">
+          <div class="workspace-pill">
+            <div class="workspace-pill-left">
+              <div class="workspace-mark">A</div>
+              <div style="min-width:0;">
+                <div class="workspace-name" data-i18n="appTitle"></div>
+                <div class="workspace-sub" data-i18n="appTagline"></div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="side-section-label">PLATFORM</div>
+            <nav class="admin-nav" id="admin-nav" aria-label="Admin sections">
+              <button type="button" data-section="overview"></button>
+              <button type="button" data-section="companies"></button>
+              <button type="button" data-section="users"></button>
+              <button type="button" data-section="branches"></button>
+              <button type="button" data-section="workplaces"></button>
+              <button type="button" data-section="shifts"></button>
+              <button type="button" data-section="devices"></button>
+              <button type="button" data-section="payments"></button>
+              <button type="button" data-section="audit"></button>
+            </nav>
+          </div>
+
+          <a class="nav-tab admin-hr-shortcut" href="/hr" data-i18n="hrDashboardLink"></a>
+
+          <div class="sidebar-user-card" style="margin-top:auto;">
+            <div class="user-avatar-circle">AD</div>
+            <div style="min-width:0;flex:1;">
+              <div style="font-weight:600;font-size:0.75rem;color:var(--obsidian);word-break:break-word;" id="admin-user-badge"></div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- 3. MAIN ADMIN WORKSPACE -->
+        <div class="ops-main">
+          <div class="ops-main-header">
+            <div>
+              <div class="ops-breadcrumb" id="admin-breadcrumb">WE HR ADMIN / OVERVIEW</div>
+              <h2 class="ops-page-title" id="admin-page-title">Overview</h2>
+            </div>
+            <div class="ops-header-controls">
+              <a class="btn btn-secondary btn-sm" href="/hr" data-i18n="hrDashboardLink"></a>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-lang"></button>
+              <button type="button" class="btn btn-secondary btn-sm hidden" id="btn-logout" data-i18n="signOut"></button>
+            </div>
+          </div>
+
+          <div class="admin-main" id="admin-main"></div>
+        </div>
+      </div>
     </section>
   </main>
 

@@ -988,17 +988,29 @@
   // --------------------------------------------------------------------------
   // Shell: language, navigation, session
   // --------------------------------------------------------------------------
+  function syncSectionMeta() {
+    const titleEl = $('admin-page-title');
+    const crumbEl = $('admin-breadcrumb');
+    if (titleEl) titleEl.textContent = t('sec_' + state.section);
+    if (crumbEl) crumbEl.textContent = `WE HR ADMIN / ${String(state.section).toUpperCase()}`;
+    document.querySelectorAll('[data-admin-rail]').forEach((b) => {
+      b.classList.toggle('active', b.dataset.adminRail === state.section);
+    });
+  }
+
   function applyLanguage() {
     document.documentElement.lang = state.lang;
     document.documentElement.dir = state.lang === 'ar' ? 'rtl' : 'ltr';
     document.querySelectorAll('[data-i18n]').forEach((el) => (el.textContent = t(el.dataset.i18n)));
     $('btn-lang').textContent = t('langToggle');
+    if ($('btn-login-lang')) $('btn-login-lang').textContent = t('langToggle');
     document.querySelectorAll('#admin-nav button').forEach((b) => {
       const count = b.querySelector('.nav-count');
       b.textContent = t('sec_' + b.dataset.section);
       if (count) b.appendChild(count);
     });
     if (state.user) $('admin-user-badge').textContent = `${state.user.email} · ${t('role_' + state.user.role)}`;
+    syncSectionMeta();
   }
 
   function updateNavCounts(metrics) {
@@ -1023,6 +1035,7 @@
       if (b.dataset.section === state.section) b.setAttribute('aria-current', 'page');
       else b.removeAttribute('aria-current');
     });
+    syncSectionMeta();
     if (!main.innerHTML) main.innerHTML = `<div class="card empty">${esc(t('loading'))}</div>`;
     await renderers[state.section](main);
   }
@@ -1035,6 +1048,7 @@
   }
 
   function showConsole() {
+    if ($('admin-login-wrap')) $('admin-login-wrap').classList.add('hidden');
     $('view-login').classList.add('hidden');
     $('view-console').classList.remove('hidden');
     $('btn-logout').classList.remove('hidden');
@@ -1049,6 +1063,7 @@
     storageSet('wehr_admin_token', null);
     storageSet('wehr_home_token', null);
     $('view-console').classList.add('hidden');
+    if ($('admin-login-wrap')) $('admin-login-wrap').classList.remove('hidden');
     $('view-login').classList.remove('hidden');
     $('btn-logout').classList.add('hidden');
     $('admin-user-badge').classList.add('hidden');
@@ -1080,15 +1095,21 @@
   });
 
   $('btn-logout').addEventListener('click', signOut);
+  if ($('btn-admin-rail-logout')) $('btn-admin-rail-logout').addEventListener('click', signOut);
   $('btn-lang').addEventListener('click', () => {
     state.lang = state.lang === 'ar' ? 'en' : 'ar';
     storageSet('wehr_lang', state.lang);
     applyLanguage();
     if (state.user) render();
   });
+  if ($('btn-login-lang')) $('btn-login-lang').addEventListener('click', () => $('btn-lang').click());
+  if ($('btn-admin-rail-lang')) $('btn-admin-rail-lang').addEventListener('click', () => $('btn-lang').click());
   $('admin-nav').addEventListener('click', (ev) => {
     const b = ev.target.closest('button[data-section]');
     if (b) showSection(b.dataset.section);
+  });
+  document.querySelectorAll('[data-admin-rail]').forEach((b) => {
+    b.addEventListener('click', () => showSection(b.dataset.adminRail));
   });
   $('admin-main').addEventListener('click', (ev) => {
     const b = ev.target.closest('[data-action]');
@@ -1096,7 +1117,10 @@
   });
   window.addEventListener('hashchange', () => state.user && location.hash.slice(1) !== state.section && showSection(location.hash.slice(1)));
 
-  if (bridge.available) $('view-login').classList.add('hidden');
+  if (bridge.available) {
+    $('view-login').classList.add('hidden');
+    if ($('admin-login-wrap')) $('admin-login-wrap').classList.add('hidden');
+  }
   applyLanguage();
   restoreSession();
 })();

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * We HR — Web Dashboard & Employee Mobile Attendance Client Controller
+ * We HR — Fieldnote Ops Workspace & Employee Attendance Client Controller
  */
 
 (function () {
@@ -19,13 +19,20 @@
     pulseFilter: 'all',
     range: 'today',
     searchQuery: '',
+    selectedBranchId: null,
+    selectedDeptId: null,
+    collapsedBranches: {},
+    activeQueueIndex: 0,
     lastOverviewData: null,
+    lastLeavesData: null,
+    lastDevicesData: null,
     lastEmployeesData: [],
     pendingQueueItems: [],
+    liveTimer: null,
   };
 
   function t(key) {
-    const dict = window.WE_HR_I18N[state.lang] || window.WE_HR_I18N.ar;
+    const dict = (window.WE_HR_I18N && window.WE_HR_I18N[state.lang]) || (window.WE_HR_I18N && window.WE_HR_I18N.ar) || {};
     return dict[key] || key;
   }
 
@@ -46,7 +53,8 @@
 
   function showAlert(message, type = 'success') {
     const box = document.getElementById('global-alert');
-    box.className = `alert alert-${type}`;
+    if (!box) return;
+    box.className = `alert alert-${type} ops-global-alert`;
     box.textContent = message;
     box.classList.remove('hidden');
     setTimeout(() => box.classList.add('hidden'), 6500);
@@ -65,6 +73,20 @@
     return { status: resp.status, ok: resp.ok, data };
   }
 
+  function formatLiveClockString() {
+    const now = new Date();
+    const formattedDate = now.toLocaleDateString(state.lang === 'ar' ? 'ar-EG' : 'en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    });
+    const formattedTime = now.toLocaleTimeString(state.lang === 'ar' ? 'ar-EG' : 'en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    return `${formattedDate} · ${formattedTime}`;
+  }
+
   function updateMainHeaderMeta(tabName) {
     const labelMap = {
       overview: t('navOverview'),
@@ -81,24 +103,13 @@
       : 'WE HR';
     setText('ops-breadcrumb', `${String(tenantTag).toUpperCase()} / ${String(tabName).toUpperCase()}`);
     setText('ops-page-title', labelMap[tabName] || tabName);
-
-    const now = new Date();
-    const formattedDate = now.toLocaleDateString(state.lang === 'ar' ? 'ar-EG' : 'en-GB', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-    });
-    const formattedTime = now.toLocaleTimeString(state.lang === 'ar' ? 'ar-EG' : 'en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-    setText('ops-live-datetime', `${formattedDate} · ${formattedTime}`);
+    setText('ops-live-datetime', formatLiveClockString());
   }
 
   function applyLocalization() {
-    const dict = window.WE_HR_I18N[state.lang];
+    const dict = (window.WE_HR_I18N && window.WE_HR_I18N[state.lang]) || {};
     document.documentElement.lang = state.lang;
-    document.documentElement.dir = dict.dir;
+    document.documentElement.dir = dict.dir || 'rtl';
 
     setText('ui-app-title', t('appTitle'));
     setText('ui-app-tagline', t('tagline'));
@@ -125,6 +136,8 @@
     setText('ui-side-workspace-lbl', t('opsSideWorkspace'));
     setText('ui-side-live-lbl', t('opsSideLive'));
     setText('ui-side-branches-lbl', t('opsSideBranches'));
+    setText('branch-filter-chip', t('clearFilter'));
+
     const searchEl = document.getElementById('ops-quick-search');
     if (searchEl) searchEl.placeholder = t('opsSearchPlaceholder');
 
@@ -155,6 +168,9 @@
     setText('pulse-tab-all', t('pulseFilterAll'));
     setText('pulse-tab-exc', t('pulseFilterExc'));
     setText('pulse-tab-ok', t('pulseFilterOk'));
+    setText('ui-col-stream', t('colStream'));
+    setText('ui-col-last24', t('colLast24'));
+    setText('ui-col-pulse-status', t('colPulseStatus'));
     setText('ui-needs-you-title', t('needsYouTitle'));
     setText('btn-open-full-queue', t('openQueueBtn'));
     setText('ui-needs-you-footer', t('needsYouFooter'));
@@ -208,6 +224,7 @@
     const { ok, data } = await apiFetch('/api/auth/demo-accounts');
     if (!ok || !data.accounts) return;
     const container = document.getElementById('demo-accounts-list');
+    if (!container) return;
     container.innerHTML = '';
     for (const acc of data.accounts) {
       const btn = document.createElement('button');
@@ -216,8 +233,8 @@
       const compName = state.lang === 'ar' ? acc.company_name_ar || 'منصة We HR العامة' : acc.company_name_en || 'Platform Super Admin';
       const empName = state.lang === 'ar' ? acc.full_name_ar || acc.email : acc.full_name_en || acc.email;
       btn.innerHTML = `
-        <div style="font-weight:700;font-size:0.84rem;color:var(--primary);">${esc(empName)} <span class="badge badge-neutral">${esc(acc.role)}</span></div>
-        <div style="font-size:0.76rem;color:var(--text-muted);margin-top:0.2rem;">${esc(compName)} — <code>${esc(acc.email)}</code></div>
+        <div style="font-weight:700;font-size:0.83rem;color:var(--obsidian);">${esc(empName)} <span class="badge badge-neutral">${esc(acc.role)}</span></div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">${esc(compName)} — <code>${esc(acc.email)}</code></div>
       `;
       btn.addEventListener('click', () => {
         document.getElementById('login-email').value = acc.email;
@@ -255,7 +272,144 @@
   }
 
   // ==========================================================================
-  // FIELDNOTE HERO 3-MODE CHART RENDERER (Dots / Ridgelines / 3D Bars)
+  // HIERARCHICAL BRANCHES -> DEPARTMENTS SIDEBAR TREE
+  // ==========================================================================
+  function getFilteredEventsAndEmployees() {
+    const allEvents = (state.lastOverviewData && state.lastOverviewData.recentEvents) || [];
+    const allEmps = state.lastEmployeesData || [];
+    if (!state.selectedBranchId && !state.selectedDeptId) {
+      return { events: allEvents, employees: allEmps };
+    }
+    const empMap = new Map();
+    for (const e of allEmps) empMap.set(e.id, e);
+
+    const employees = allEmps.filter((e) => {
+      if (state.selectedDeptId) return e.department_id === state.selectedDeptId;
+      if (state.selectedBranchId) return e.branch_id === state.selectedBranchId;
+      return true;
+    });
+
+    const events = allEvents.filter((ev) => {
+      const emp = empMap.get(ev.employee_id);
+      const bId = (emp && emp.branch_id) || ev.branch_id;
+      const dId = (emp && emp.department_id) || ev.department_id;
+      if (state.selectedDeptId) return dId === state.selectedDeptId;
+      if (state.selectedBranchId) return bId === state.selectedBranchId;
+      return true;
+    });
+
+    return { events, employees };
+  }
+
+  function renderBranchesTree() {
+    const brTree = document.getElementById('sidebar-branches-tree');
+    const clearChip = document.getElementById('branch-filter-chip');
+    if (clearChip) {
+      clearChip.classList.toggle('hidden', !state.selectedBranchId && !state.selectedDeptId);
+    }
+    if (!brTree) return;
+
+    const branches = (state.referenceData && state.referenceData.branches) || [];
+    const depts = (state.referenceData && state.referenceData.departments) || [];
+    const emps = state.lastEmployeesData || [];
+    const allEvents = (state.lastOverviewData && state.lastOverviewData.recentEvents) || [];
+
+    const empMap = new Map();
+    for (const e of emps) empMap.set(e.id, e);
+
+    const branchAlertSet = new Set();
+    const deptAlertSet = new Set();
+    for (const ev of allEvents) {
+      if (['rejected', 'needs_review', 'pending'].includes(ev.sync_status)) {
+        const emp = empMap.get(ev.employee_id);
+        if (emp && emp.branch_id) branchAlertSet.add(emp.branch_id);
+        if (emp && emp.department_id) deptAlertSet.add(emp.department_id);
+      }
+    }
+
+    const folderSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+    const chevronSvg = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 12 15 18 9"/></svg>';
+
+    brTree.innerHTML = branches
+      .map((b) => {
+        const bName = state.lang === 'ar' ? b.name_ar || b.name_en : b.name_en || b.name_ar;
+        const bCount = emps.filter((e) => e.branch_id === b.id).length;
+        const bDepts = depts.filter((d) => d.branch_id === b.id);
+        const isCollapsed = Boolean(state.collapsedBranches[b.id]);
+        const isBranchSelected = state.selectedBranchId === b.id && !state.selectedDeptId;
+        const hasBranchAlert = branchAlertSet.has(b.id);
+
+        const deptHtml = bDepts
+          .map((d) => {
+            const dName = state.lang === 'ar' ? d.name_ar || d.name_en : d.name_en || d.name_ar;
+            const dCount = emps.filter((e) => e.department_id === d.id).length;
+            const isDeptSelected = state.selectedDeptId === d.id;
+            const hasDeptAlert = deptAlertSet.has(d.id);
+            return `
+              <button type="button" class="tree-dept-row ${isDeptSelected ? 'is-selected' : ''}" data-tree-branch="${esc(b.id)}" data-tree-dept="${esc(d.id)}">
+                <span class="tree-row-left">
+                  ${folderSvg}
+                  <span class="tree-row-name">${esc(dName)}</span>
+                </span>
+                <span class="tree-row-right">
+                  ${hasDeptAlert ? '<span class="tree-alert-dot" title="Active exceptions"></span>' : ''}
+                  <span class="tree-count">${dCount}</span>
+                </span>
+              </button>
+            `;
+          })
+          .join('');
+
+        return `
+          <div class="tree-branch-group ${isCollapsed ? 'is-collapsed' : ''}">
+            <button type="button" class="tree-branch-row ${isBranchSelected ? 'is-selected' : ''}" data-tree-branch-row="${esc(b.id)}">
+              <span class="tree-row-left">
+                <span class="tree-chevron" data-tree-toggle="${esc(b.id)}">${chevronSvg}</span>
+                ${folderSvg}
+                <span class="tree-row-name">${esc(bName)}</span>
+              </span>
+              <span class="tree-row-right">
+                ${hasBranchAlert ? '<span class="tree-alert-dot" title="Active exceptions"></span>' : ''}
+                <span class="tree-count">${bCount || esc(b.code)}</span>
+              </span>
+            </button>
+            ${bDepts.length ? `<div class="tree-dept-list">${deptHtml}</div>` : ''}
+          </div>
+        `;
+      })
+      .join('');
+
+    brTree.querySelectorAll('[data-tree-branch-row]').forEach((rowBtn) => {
+      rowBtn.addEventListener('click', (ev) => {
+        const branchId = rowBtn.getAttribute('data-tree-branch-row');
+        const toggleEl = ev.target.closest('[data-tree-toggle]');
+        if (toggleEl) {
+          state.collapsedBranches[branchId] = !state.collapsedBranches[branchId];
+          renderBranchesTree();
+          return;
+        }
+        const alreadyBranchOnly = state.selectedBranchId === branchId && !state.selectedDeptId;
+        state.selectedBranchId = alreadyBranchOnly ? null : branchId;
+        state.selectedDeptId = null;
+        if (state.selectedBranchId) state.collapsedBranches[branchId] = false;
+        applyOverviewFiltersAndRender();
+      });
+    });
+
+    brTree.querySelectorAll('[data-tree-dept]').forEach((deptBtn) => {
+      deptBtn.addEventListener('click', () => {
+        const branchId = deptBtn.getAttribute('data-tree-branch');
+        const deptId = deptBtn.getAttribute('data-tree-dept');
+        const alreadyDept = state.selectedDeptId === deptId;
+        state.selectedBranchId = alreadyDept ? null : branchId;
+        state.selectedDeptId = alreadyDept ? null : deptId;
+        applyOverviewFiltersAndRender();
+      });
+    });
+  }
+
+  // ==========================================================================
+  // FIELDNOTE HERO 3-MODE ANIMATED CHART & 24H RAIL TICKS
   // ==========================================================================
   function buildHourlyBuckets(events) {
     const buckets = Array.from({ length: 24 }, (_, hour) => ({
@@ -270,15 +424,14 @@
       const hr = Number.isNaN(dt.getTime()) ? 9 : dt.getHours();
       const b = buckets[Math.max(0, Math.min(23, hr))];
       b.items.push(evt);
-      if (evt.sync_status === 'rejected' || evt.sync_status === 'needs_review') {
+      if (evt.sync_status === 'rejected' || evt.sync_status === 'needs_review' || evt.sync_status === 'pending') {
         b.flagged += 1;
       } else {
         b.verified += 1;
       }
     }
-    // Add scheduled shift baseline projections for upcoming hours so timeline feels alive
     const nowHour = new Date().getHours();
-    [9, 10, 14, 17, 22].forEach((sh) => {
+    [9, 10, 14, 17, 21].forEach((sh) => {
       if (sh > nowHour) {
         buckets[sh].scheduled = Math.max(buckets[sh].scheduled, 2);
       }
@@ -286,21 +439,39 @@
     return { buckets, nowHour };
   }
 
+  function renderRail24hTicks(buckets, nowHour) {
+    const container = document.getElementById('rail-24h-ticks');
+    if (!container) return;
+    container.innerHTML = buckets
+      .map((b, h) => {
+        const cls = [];
+        if (h === nowHour) cls.push('now');
+        else if (b.flagged > 0) cls.push('alert');
+        else if (b.verified > 0) cls.push('active');
+        else if (h % 6 === 0) cls.push('major');
+        return `<span class="${cls.join(' ')}" title="${String(h).padStart(2, '0')}:00"></span>`;
+      })
+      .join('');
+  }
+
   function renderHeroChart(mode, events) {
     const stage = document.getElementById('hero-chart-canvas');
     if (!stage) return;
     const { buckets, nowHour } = buildHourlyBuckets(events);
+    renderRail24hTicks(buckets, nowHour);
+
     const W = 640;
-    const H = 195;
-    const padL = 24;
+    const H = 206;
+    const padL = mode === 'waves' ? 118 : 22;
     const padR = 16;
-    const padT = 28;
+    const padT = 30;
     const padB = 26;
     const plotW = W - padL - padR;
     const plotH = H - padT - padB;
     const stepX = plotW / 24;
-    const nowX = padL + (nowHour + new Date().getMinutes() / 60) * stepX;
-    const nowLabel = `${String(nowHour).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
+    const nowMin = new Date().getMinutes();
+    const nowX = padL + (nowHour + nowMin / 60) * stepX;
+    const nowLabel = `${String(nowHour).padStart(2, '0')}:${String(nowMin).padStart(2, '0')}`;
 
     const flaggedEvent = (events || []).find((e) => e.sync_status === 'rejected' || e.sync_status === 'needs_review');
     const flaggedTime = flaggedEvent
@@ -308,122 +479,206 @@
       : null;
 
     let bodySvg = '';
+    const monoFont = "'JetBrains Mono', ui-monospace, monospace";
 
-    // Subtle background dot grid
-    bodySvg += `<defs><pattern id="weGridDots" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="0.8" fill="#e2e8f0"/></pattern></defs>`;
-    bodySvg += `<rect x="${padL}" y="${padT}" width="${plotW}" height="${plotH}" fill="url(#weGridDots)" rx="8"/>`;
+    bodySvg += `<defs>
+      <pattern id="weGridDots" width="10" height="10" patternUnits="userSpaceOnUse">
+        <circle cx="2" cy="2" r="0.85" fill="#DFE3EC"/>
+      </pattern>
+    </defs>`;
+    bodySvg += `<rect x="${padL}" y="${padT}" width="${plotW}" height="${plotH}" fill="url(#weGridDots)" rx="10"/>`;
 
     if (mode === 'dots') {
-      const maxStack = Math.max(6, ...buckets.map((b) => b.verified + b.flagged + b.scheduled));
-      const rowH = Math.min(13, plotH / maxStack);
+      const maxStack = Math.max(7, ...buckets.map((b) => b.verified + b.flagged + b.scheduled));
+      const rowH = Math.min(12.5, (plotH - 12) / maxStack);
       buckets.forEach((b, h) => {
         const cx = padL + h * stepX + stepX / 2;
+        const delayBase = h * 14;
         let idx = 0;
         for (let i = 0; i < b.verified; i++) {
           const cy = padT + plotH - 8 - idx * rowH;
-          bodySvg += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="#18181b"/>`;
+          bodySvg += `<circle class="chart-dot" style="--d:${delayBase + idx * 18}ms" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="3.9" fill="#1A1A1D"><title>${String(h).padStart(2, '0')}:00 · Verified (${b.verified})</title></circle>`;
           idx++;
         }
         for (let i = 0; i < b.flagged; i++) {
           const cy = padT + plotH - 8 - idx * rowH;
-          bodySvg += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4.2" fill="#ef4444"/>`;
+          bodySvg += `<circle class="chart-dot" style="--d:${delayBase + idx * 18}ms" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4.1" fill="#F04438"><title>${String(h).padStart(2, '0')}:00 · Flagged (${b.flagged})</title></circle>`;
           idx++;
         }
         for (let i = 0; i < b.scheduled; i++) {
           const cy = padT + plotH - 8 - idx * rowH;
-          bodySvg += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="3.6" fill="#ffffff" stroke="#9ca3af" stroke-width="1.4"/>`;
+          bodySvg += `<circle class="chart-dot" style="--d:${delayBase + idx * 18}ms" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="3.5" fill="#FFFFFF" stroke="#9AA3B2" stroke-width="1.4"><title>${String(h).padStart(2, '0')}:00 · Scheduled</title></circle>`;
           idx++;
         }
         if (b.verified + b.flagged + b.scheduled === 0 && h % 2 === 0) {
           const cy = padT + plotH - 8;
-          bodySvg += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="2" fill="#d1d5db"/>`;
+          bodySvg += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="2" fill="#D2D7E0"/>`;
         }
       });
     } else if (mode === 'waves') {
-      // Group events by workplace for stacked ridgelines (Slide 2 look)
       const groupsMap = new Map();
       for (const e of events || []) {
-        const name = (state.lang === 'ar' ? e.workplace_name_ar : e.workplace_name_en) || 'Main HQ';
-        if (!groupsMap.has(name)) groupsMap.set(name, new Array(24).fill(0));
-        const hr = new Date(e.server_timestamp).getHours();
-        groupsMap.get(name)[Math.max(0, Math.min(23, hr))] += 1;
+        const name = (state.lang === 'ar' ? e.workplace_name_ar || e.workplace_name_en : e.workplace_name_en || e.workplace_name_ar) || 'Main HQ';
+        if (!groupsMap.has(name)) {
+          groupsMap.set(name, { counts: new Array(24).fill(0), flags: new Array(24).fill(0), total: 0 });
+        }
+        const dt = new Date(e.server_timestamp);
+        const hr = Math.max(0, Math.min(23, Number.isNaN(dt.getTime()) ? 9 : dt.getHours()));
+        const entry = groupsMap.get(name);
+        entry.counts[hr] += 1;
+        entry.total += 1;
+        if (e.sync_status === 'rejected' || e.sync_status === 'needs_review') entry.flags[hr] += 1;
       }
       if (groupsMap.size === 0) {
-        groupsMap.set(state.lang === 'ar' ? 'المقر الرئيسي' : 'Main HQ', new Array(24).fill(0));
+        groupsMap.set(state.lang === 'ar' ? 'المقر الرئيسي' : 'Main HQ', { counts: new Array(24).fill(0), flags: new Array(24).fill(0), total: 0 });
       }
       const streams = Array.from(groupsMap.entries()).slice(0, 5);
       const laneH = plotH / streams.length;
-      streams.forEach(([name, arr], idx) => {
+
+      streams.forEach(([name, entry], idx) => {
         const baseY = padT + (idx + 1) * laneH - 6;
-        const maxVal = Math.max(1, ...arr);
-        let d = `M ${padL} ${baseY}`;
-        for (let h = 0; h < 24; h++) {
-          const x = padL + h * stepX + stepX / 2;
-          const amp = (arr[h] / maxVal) * (laneH * 0.65);
-          const y = baseY - amp;
-          const prevX = h === 0 ? padL : padL + (h - 1) * stepX + stepX / 2;
-          const midX = (prevX + x) / 2;
-          d += ` C ${midX.toFixed(1)} ${baseY}, ${midX.toFixed(1)} ${y.toFixed(1)}, ${x.toFixed(1)} ${y.toFixed(1)}`;
+        const maxVal = Math.max(1, ...entry.counts);
+        const points = entry.counts.map((v, h) => ({
+          x: padL + h * stepX + stepX / 2,
+          y: baseY - (v / maxVal) * (laneH * 0.64),
+          flagged: entry.flags[h] > 0,
+        }));
+
+        // Build solid path up to nowHour & dashed forecast path after
+        const splitIdx = Math.max(0, Math.min(23, nowHour));
+        let solidD = `M ${padL} ${baseY}`;
+        let prevX = padL;
+        let prevY = baseY;
+        for (let h = 0; h <= splitIdx; h++) {
+          const p = points[h];
+          const midX = (prevX + p.x) / 2;
+          solidD += ` C ${midX.toFixed(1)} ${prevY.toFixed(1)}, ${midX.toFixed(1)} ${p.y.toFixed(1)}, ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+          prevX = p.x;
+          prevY = p.y;
         }
-        d += ` L ${padL + plotW} ${baseY}`;
-        bodySvg += `<path d="${d}" fill="rgba(24,24,27,0.05)" stroke="#18181b" stroke-width="1.6"/>`;
-        const shortName = name.length > 20 ? name.slice(0, 18) + '…' : name;
-        bodySvg += `<text x="${padL + 4}" y="${baseY - laneH * 0.48}" font-size="9.5" fill="#6b7280" font-family="ui-monospace,monospace">${esc(shortName)}</text>`;
+        const nowInterY = prevY;
+        solidD += ` L ${nowX.toFixed(1)} ${nowInterY.toFixed(1)}`;
+        const fillD = `${solidD} L ${nowX.toFixed(1)} ${baseY} L ${padL} ${baseY} Z`;
+
+        bodySvg += `<line x1="${padL}" y1="${baseY.toFixed(1)}" x2="${W - padR}" y2="${baseY.toFixed(1)}" stroke="#E6E9EF" stroke-width="1"/>`;
+        bodySvg += `<path d="${fillD}" fill="rgba(26,26,29,0.045)"/>`;
+        bodySvg += `<path class="chart-wave-line" style="--d:${idx * 70}ms" d="${solidD}" fill="none" stroke="#1A1A1D" stroke-width="1.65" stroke-linecap="round"/>`;
+
+        if (splitIdx < 23) {
+          let dashD = `M ${nowX.toFixed(1)} ${nowInterY.toFixed(1)}`;
+          let dPrevX = nowX;
+          let dPrevY = nowInterY;
+          for (let h = splitIdx + 1; h < 24; h++) {
+            const p = points[h];
+            const midX = (dPrevX + p.x) / 2;
+            dashD += ` C ${midX.toFixed(1)} ${dPrevY.toFixed(1)}, ${midX.toFixed(1)} ${p.y.toFixed(1)}, ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+            dPrevX = p.x;
+            dPrevY = p.y;
+          }
+          dashD += ` L ${padL + plotW} ${baseY}`;
+          bodySvg += `<path d="${dashD}" fill="none" stroke="#BDC4D0" stroke-width="1.25" stroke-dasharray="3 3"/>`;
+        }
+
+        // Flagged anomaly peaks + lime intersection dot at NOW
+        points.forEach((p, h) => {
+          if (p.flagged && h <= splitIdx) {
+            bodySvg += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.8" fill="#F04438"/>`;
+          }
+        });
+        bodySvg += `<circle cx="${nowX.toFixed(1)}" cy="${nowInterY.toFixed(1)}" r="3.4" fill="#D6F849" stroke="#1A1A1D" stroke-width="1.1"/>`;
+
+        // Left lane title & count
+        const shortName = name.length > 16 ? name.slice(0, 14) + '…' : name;
+        bodySvg += `<text x="8" y="${(baseY - 11).toFixed(1)}" font-size="10" font-weight="600" fill="#1A1A1D" font-family="Inter,IBM Plex Sans Arabic,sans-serif">${esc(shortName)}</text>`;
+        bodySvg += `<text x="8" y="${baseY.toFixed(1)}" font-size="8.5" fill="#7C8594" font-family="${monoFont}">${entry.total} PUNCHES</text>`;
       });
     } else {
-      // 3D Isometric Column Bars (Slide 3 look)
+      // True 3-Face Isometric 3D Columns (Slide 3)
       const maxTotal = Math.max(4, ...buckets.map((b) => b.verified + b.flagged + b.scheduled));
-      const barW = Math.max(8, stepX * 0.56);
+      const barW = Math.max(9, stepX * 0.52);
+      const dx = 4.5;
+      const dy = 4.5;
+
       buckets.forEach((b, h) => {
         const total = b.verified + b.flagged;
         const val = total || b.scheduled;
+        const bx = padL + h * stepX + (stepX - barW - dx) / 2;
         if (!val) {
-          const bx = padL + h * stepX + (stepX - barW) / 2;
-          bodySvg += `<rect x="${bx.toFixed(1)}" y="${(padT + plotH - 4).toFixed(1)}" width="${barW.toFixed(1)}" height="3" rx="1" fill="#e2e8f0"/>`;
+          const baseY = padT + plotH - 4;
+          bodySvg += `<rect x="${bx.toFixed(1)}" y="${baseY.toFixed(1)}" width="${barW.toFixed(1)}" height="3" rx="1" fill="#E4E7EE"/>`;
           return;
         }
-        const barH = Math.max(12, (val / maxTotal) * (plotH - 16));
-        const bx = padL + h * stepX + (stepX - barW) / 2;
+        const barH = Math.max(12, (val / maxTotal) * (plotH - 18));
         const by = padT + plotH - barH;
         const isAlert = b.flagged > 0;
         const isFuture = total === 0 && b.scheduled > 0;
-        const fillFront = isAlert ? '#fee2e2' : isFuture ? '#ffffff' : '#e5e7eb';
-        const fillSide = isAlert ? '#fca5a5' : isFuture ? '#e2e8f0' : '#cbd5e1';
-        const strokeCol = isAlert ? '#ef4444' : isFuture ? '#9ca3af' : '#18181b';
-        bodySvg += `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${barW.toFixed(1)}" height="${barH.toFixed(1)}" rx="2" fill="${fillFront}" stroke="${strokeCol}" stroke-width="1" ${isFuture ? 'stroke-dasharray="2 2"' : ''}/>`;
-        bodySvg += `<polygon points="${(bx + barW).toFixed(1)},${by.toFixed(1)} ${(bx + barW + 4).toFixed(1)},${(by - 4).toFixed(1)} ${(bx + barW + 4).toFixed(1)},${(by + barH - 4).toFixed(1)} ${(bx + barW).toFixed(1)},${(by + barH).toFixed(1)}" fill="${fillSide}"/>`;
-        if (isAlert) {
-          bodySvg += `<circle cx="${(bx + barW / 2).toFixed(1)}" cy="${(by - 5).toFixed(1)}" r="3.2" fill="#ef4444"/>`;
-        }
+        const isNow = h === nowHour;
+
+        const topFill = isAlert ? '#FEE4E2' : isNow ? '#D6F849' : isFuture ? '#FFFFFF' : '#FFFFFF';
+        const frontFill = isAlert ? '#FEF3F2' : isFuture ? '#FFFFFF' : '#EFF1F5';
+        const sideFill = isAlert ? '#FECACA' : isFuture ? '#F3F4F6' : '#D5DBE4';
+        const strokeCol = isAlert ? '#F04438' : isFuture ? '#B0B8C5' : '#8A93A2';
+        const dashAttr = isFuture ? 'stroke-dasharray="2.5 2"' : '';
+
+        const x1 = bx.toFixed(1);
+        const y1 = by.toFixed(1);
+        const x2 = (bx + barW).toFixed(1);
+        const y2 = (by + barH).toFixed(1);
+        const x1d = (bx + dx).toFixed(1);
+        const y1d = (by - dy).toFixed(1);
+        const x2d = (bx + barW + dx).toFixed(1);
+        const y2d = (by + barH - dy).toFixed(1);
+
+        bodySvg += `<g class="chart-iso-bar" style="--d:${h * 20}ms">
+          <title>${String(h).padStart(2, '0')}:00 · Verified ${b.verified}, Flagged ${b.flagged}</title>
+          <polygon points="${x1},${y1} ${x1d},${y1d} ${x2d},${y1d} ${x2},${y1}" fill="${topFill}" stroke="${strokeCol}" stroke-width="0.9" stroke-linejoin="round" ${dashAttr}/>
+          <rect x="${x1}" y="${y1}" width="${barW.toFixed(1)}" height="${barH.toFixed(1)}" fill="${frontFill}" stroke="${strokeCol}" stroke-width="0.9" ${dashAttr}/>
+          <polygon points="${x2},${y1} ${x2d},${y1d} ${x2d},${y2d} ${x2},${y2}" fill="${sideFill}" stroke="${strokeCol}" stroke-width="0.9" stroke-linejoin="round" ${dashAttr}/>
+          ${isAlert ? `<polygon points="${(bx + barW / 2).toFixed(1)},${(by - 9).toFixed(1)} ${(bx + barW / 2 - 4).toFixed(1)},${(by - 4).toFixed(1)} ${(bx + barW / 2 + 4).toFixed(1)},${(by - 4).toFixed(1)}" fill="#F04438"/>` : ''}
+        </g>`;
       });
     }
 
-    // X-Axis labels (00, 03, 06, 09, 12, 15, 18, 21, 24)
+    // X-Axis ticks (00..24)
     for (let h = 0; h <= 24; h += 3) {
       const lx = padL + h * stepX;
-      bodySvg += `<text x="${lx.toFixed(1)}" y="${H - 7}" text-anchor="middle" font-size="9.5" fill="#9ca3af" font-family="ui-monospace,monospace">${String(h).padStart(2, '0')}</text>`;
+      bodySvg += `<text x="${lx.toFixed(1)}" y="${H - 7}" text-anchor="middle" font-size="9.5" fill="#9AA3B2" font-family="${monoFont}">${String(h).padStart(2, '0')}</text>`;
     }
 
-    // NOW marker line & pill
-    bodySvg += `<line x1="${nowX.toFixed(1)}" y1="${padT - 4}" x2="${nowX.toFixed(1)}" y2="${padT + plotH}" stroke="#18181b" stroke-width="1.2" stroke-dasharray="3 3"/>`;
-    const pillX = Math.min(W - 92, Math.max(padL, nowX + 4));
-    bodySvg += `<rect x="${pillX.toFixed(1)}" y="5" width="76" height="19" rx="9.5" fill="#18181b"/>`;
-    bodySvg += `<circle cx="${(pillX + 11).toFixed(1)}" cy="14.5" r="3" fill="#d4f759"/>`;
-    bodySvg += `<text x="${(pillX + 19).toFixed(1)}" y="18" font-size="9.5" font-weight="700" fill="#ffffff" font-family="ui-monospace,monospace">NOW ${nowLabel}</text>`;
+    // NOW marker line & glossy pill
+    bodySvg += `<line x1="${nowX.toFixed(1)}" y1="${padT - 5}" x2="${nowX.toFixed(1)}" y2="${padT + plotH}" stroke="#1A1A1D" stroke-width="1.2" stroke-dasharray="3 3"/>`;
+    const pillX = Math.min(W - 86, Math.max(padL, nowX + 4));
+    bodySvg += `<rect x="${pillX.toFixed(1)}" y="5" width="76" height="19" rx="9.5" fill="#1A1A1D"/>`;
+    bodySvg += `<circle class="chart-now-dot" cx="${(pillX + 11).toFixed(1)}" cy="14.5" r="3" fill="#D6F849"/>`;
+    bodySvg += `<text x="${(pillX + 19).toFixed(1)}" y="18" font-size="9.5" font-weight="600" fill="#FFFFFF" font-family="${monoFont}">NOW ${nowLabel}</text>`;
 
-    // Anomaly callout pill if any flagged event exists
+    // Anomaly callout pill
     if (flaggedEvent && flaggedTime) {
-      const fx = Math.max(padL + 10, Math.min(W - 155, padL + 8 * stepX));
-      bodySvg += `<rect x="${fx}" y="6" width="142" height="18" rx="9" fill="#ffffff" stroke="#e2e5ec"/>`;
-      bodySvg += `<circle cx="${fx + 10}" cy="15" r="3" fill="#ef4444"/>`;
-      bodySvg += `<text x="${fx + 18}" y="18" font-size="8.5" font-weight="600" fill="#111827" font-family="ui-monospace,monospace">${flaggedTime} · ${esc(flaggedEvent.rejection_code ? flaggedEvent.rejection_code.slice(0, 14) : 'NEEDS REVIEW')}</text>`;
+      const fx = Math.max(padL + 8, Math.min(W - 155, padL + 7.5 * stepX));
+      bodySvg += `<rect x="${fx}" y="6" width="144" height="18" rx="9" fill="#FFFFFF" stroke="rgba(15,23,42,0.1)"/>`;
+      bodySvg += `<circle cx="${fx + 10}" cy="15" r="3" fill="#F04438"/>`;
+      bodySvg += `<text x="${fx + 18}" y="18" font-size="8.5" font-weight="600" fill="#1A1A1D" font-family="${monoFont}">${flaggedTime} · ${esc(flaggedEvent.rejection_code ? flaggedEvent.rejection_code.slice(0, 14) : 'NEEDS REVIEW')}</text>`;
     }
 
-    stage.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Attendance activity chart">${bodySvg}</svg>`;
+    stage.innerHTML = `<svg class="hero-chart-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Attendance activity chart">${bodySvg}</svg>`;
+  }
+
+  function startLiveClockTimer() {
+    if (state.liveTimer) clearInterval(state.liveTimer);
+    state.liveTimer = setInterval(() => {
+      const ws = document.getElementById('view-workspace');
+      if (!ws || ws.classList.contains('hidden')) return;
+      setText('ops-live-datetime', formatLiveClockString());
+      const tabOv = document.getElementById('tab-overview');
+      if (tabOv && !tabOv.classList.contains('hidden') && state.lastOverviewData) {
+        const { events } = getFilteredEventsAndEmployees();
+        renderHeroChart(state.chartMode, events);
+      }
+    }, 30000);
   }
 
   // ==========================================================================
-  // WORKFLOWS PULSE & NEEDS YOU DECISION QUEUE
+  // ATTENDANCE STREAMS PULSE & NEEDS YOU DECISION QUEUE
   // ==========================================================================
   function renderWorkflowsPulse(events, employees) {
     const container = document.getElementById('workflows-pulse-list');
@@ -451,34 +706,41 @@
       byEmp.get(ev.employee_id).events.push(ev);
     }
 
-    let rows = Array.from(byEmp.values());
+    let baseRows = Array.from(byEmp.values());
     if (query) {
-      rows = rows.filter((r) =>
+      baseRows = baseRows.filter((r) =>
         `${r.employee.full_name_en || ''} ${r.employee.full_name_ar || ''} ${r.employee.employee_code || ''}`
           .toLowerCase()
           .includes(query)
       );
     }
-    if (state.pulseFilter === 'exceptions') {
-      rows = rows.filter((r) => r.events.some((ev) => ev.sync_status === 'rejected' || ev.sync_status === 'needs_review'));
-    } else if (state.pulseFilter === 'healthy') {
-      rows = rows.filter((r) => r.events.length > 0 && r.events.every((ev) => ev.sync_status === 'accepted'));
-    }
+
+    const excRows = baseRows.filter((r) => r.events.some((ev) => ev.sync_status === 'rejected' || ev.sync_status === 'needs_review' || ev.sync_status === 'pending'));
+    const okRows = baseRows.filter((r) => r.events.length > 0 && r.events.every((ev) => ev.sync_status === 'accepted'));
+
+    setText('pulse-count-all', String(baseRows.length));
+    setText('pulse-count-exc', String(excRows.length));
+    setText('pulse-count-ok', String(okRows.length));
+
+    let rows = baseRows;
+    if (state.pulseFilter === 'exceptions') rows = excRows;
+    else if (state.pulseFilter === 'healthy') rows = okRows;
 
     if (!rows.length) {
-      container.innerHTML = `<div style="padding:1.25rem;text-align:center;color:var(--text-muted);font-size:0.84rem;">No matching streams.</div>`;
+      container.innerHTML = `<div style="padding:1.25rem;text-align:center;color:var(--text-muted);font-size:0.83rem;">${esc(t('noMatchingStreams'))}</div>`;
       return;
     }
+
+    const streamIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
 
     container.innerHTML = rows
       .slice(0, 6)
       .map((row) => {
-        const empName = state.lang === 'ar' ? row.employee.full_name_ar : row.employee.full_name_en;
+        const empName = state.lang === 'ar' ? row.employee.full_name_ar || row.employee.full_name_en : row.employee.full_name_en || row.employee.full_name_ar;
         const wpName =
-          (state.lang === 'ar' ? row.employee.workplace_name_ar : row.employee.workplace_name_en) || 'Workplace';
+          (state.lang === 'ar' ? row.employee.workplace_name_ar || row.employee.workplace_name_en : row.employee.workplace_name_en || row.employee.workplace_name_ar) || 'Workplace';
         const latest = row.events[0];
 
-        // 24-tick barcode strip representing recent shift/event health
         const ticks = Array.from({ length: 24 }, (_, idx) => {
           const ev = row.events[idx % Math.max(1, row.events.length)];
           if (!row.events.length || idx < 24 - Math.min(20, row.events.length * 4)) {
@@ -486,26 +748,29 @@
           }
           if (!ev) return '<span class="ok"></span>';
           if (ev.sync_status === 'rejected') return '<span class="bad"></span>';
-          if (ev.sync_status === 'needs_review') return '<span class="warn"></span>';
+          if (ev.sync_status === 'needs_review' || ev.sync_status === 'pending') return '<span class="warn"></span>';
           return '<span class="ok"></span>';
         }).join('');
 
-        let statusBadge = `<span class="badge badge-neutral">Scheduled</span>`;
+        let statusBadge = `<span class="badge badge-neutral">${esc(t('statusScheduled'))}</span>`;
         if (latest) {
           if (latest.sync_status === 'rejected') {
-            statusBadge = `<span class="badge badge-danger">● ${esc(latest.rejection_code || 'Rejected')}</span>`;
-          } else if (latest.sync_status === 'needs_review') {
-            statusBadge = `<span class="badge badge-lime">Waiting on you</span>`;
+            statusBadge = `<span class="badge badge-danger"><span class="dot dot-coral"></span>${esc(latest.rejection_code || t('status_rejected'))}</span>`;
+          } else if (latest.sync_status === 'needs_review' || latest.sync_status === 'pending') {
+            statusBadge = `<span class="badge badge-lime">${esc(t('statusWaiting'))}</span>`;
           } else {
-            statusBadge = `<span class="badge badge-success">● Healthy</span>`;
+            statusBadge = `<span class="badge badge-success"><span class="dot dot-lime"></span>${esc(t('statusHealthy'))}</span>`;
           }
         }
 
         return `
           <div class="pulse-row">
-            <div>
-              <div class="pulse-title">${esc(empName)}</div>
-              <div class="pulse-sub">${esc(row.employee.employee_code || '')} · ${esc(wpName)}</div>
+            <div class="pulse-stream-left">
+              <div class="pulse-icon-tile">${streamIcon}</div>
+              <div style="min-width:0;">
+                <div class="pulse-title">${esc(empName)}</div>
+                <div class="pulse-sub">${esc(row.employee.employee_code || '')} · ${esc(wpName)}</div>
+              </div>
             </div>
             <div class="barcode-strip" aria-hidden="true">${ticks}</div>
             <div>${statusBadge}</div>
@@ -527,12 +792,12 @@
 
     for (const ev of (overviewData && overviewData.recentEvents) || []) {
       if (['needs_review', 'pending'].includes(ev.sync_status)) {
-        const empName = state.lang === 'ar' ? ev.full_name_ar : ev.full_name_en;
+        const empName = state.lang === 'ar' ? ev.full_name_ar || ev.full_name_en : ev.full_name_en || ev.full_name_ar;
         items.push({
           kind: 'attendance',
           id: ev.id,
           ref: ev.employee_code || 'ATT',
-          time: new Date(ev.server_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          time: new Date(ev.server_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }),
           title: `${t('evt_' + ev.event_type)} — ${empName}`,
           sub: ev.rejection_reason || ev.flags_json || 'Offline / flagged biometric or location review',
         });
@@ -541,21 +806,21 @@
 
     for (const lv of (leavesData && leavesData.leaveRequests) || []) {
       if (lv.status === 'pending') {
-        const empName = state.lang === 'ar' ? lv.full_name_ar : lv.full_name_en;
+        const empName = state.lang === 'ar' ? lv.full_name_ar || lv.full_name_en : lv.full_name_en || lv.full_name_ar;
         items.push({
           kind: 'leave',
           id: lv.id,
           ref: `LV-${lv.days_count}d`,
           time: lv.start_date,
-          title: `${lv.leave_type.toUpperCase()} · ${empName}`,
-          sub: `${lv.start_date} → ${lv.end_date} · ${lv.reason || ''}`,
+          title: `${String(lv.leave_type || 'LEAVE').toUpperCase()} · ${empName}`,
+          sub: `${lv.start_date} → ${lv.end_date}${lv.reason ? ` · ${lv.reason}` : ''}`,
         });
       }
     }
 
     for (const dev of (devicesData && devicesData.devices) || []) {
       if (dev.status === 'pending') {
-        const empName = state.lang === 'ar' ? dev.full_name_ar : dev.full_name_en;
+        const empName = state.lang === 'ar' ? dev.full_name_ar || dev.full_name_en : dev.full_name_en || dev.full_name_ar;
         items.push({
           kind: 'device',
           id: dev.id,
@@ -568,6 +833,8 @@
     }
 
     state.pendingQueueItems = items;
+    if (state.activeQueueIndex >= items.length) state.activeQueueIndex = 0;
+
     if (countBadge) countBadge.textContent = String(items.length);
     if (bellDot) bellDot.classList.toggle('hidden', items.length === 0);
 
@@ -588,43 +855,68 @@
     }
 
     const canDecide = state.user && ['company_owner', 'hr_admin', 'branch_manager', 'supervisor'].includes(state.user.role);
+    const activeItem = items[state.activeQueueIndex];
+    const otherItems = items
+      .map((item, origIdx) => ({ item, origIdx }))
+      .filter((x) => x.origIdx !== state.activeQueueIndex)
+      .slice(0, 3);
 
-    queueEl.innerHTML = items
-      .slice(0, 4)
-      .map(
-        (item, idx) => `
-      <div class="decision-item" data-queue-idx="${idx}">
+    const gripSvg = '<svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor" style="opacity:0.45;"><circle cx="5" cy="4" r="1.2"/><circle cx="10" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="10" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="10" cy="12" r="1.2"/></svg>';
+
+    let html = `
+      <div class="decision-item is-active">
         <div class="decision-meta">
-          <span>#${esc(item.ref)}</span>
-          <span>${esc(item.time)}</span>
+          <span class="decision-meta-ref">${gripSvg} #${esc(activeItem.ref)}</span>
+          <span>${esc(activeItem.time)}</span>
         </div>
-        <div class="decision-title">${esc(item.title)}</div>
-        <div class="decision-sub">${esc(item.sub)}</div>
+        <div class="decision-title">${esc(activeItem.title)}</div>
+        <div class="decision-sub">${esc(activeItem.sub)}</div>
         ${
           canDecide
             ? `<div class="decision-actions">
-                <button type="button" class="btn-approve-pill" data-q-kind="${item.kind}" data-q-id="${item.id}" data-q-act="approve">
+                <button type="button" class="btn-approve-pill" data-q-kind="${activeItem.kind}" data-q-id="${activeItem.id}" data-q-act="approve">
                   ${esc(t('approveKeyBtn'))} <span class="kbd-hint">↵</span>
                 </button>
-                <button type="button" class="btn-decline-pill" data-q-kind="${item.kind}" data-q-id="${item.id}" data-q-act="reject">
+                <button type="button" class="btn-decline-pill" data-q-kind="${activeItem.kind}" data-q-id="${activeItem.id}" data-q-act="reject">
                   ${esc(t('declineKeyBtn'))} <span class="kbd-hint">Esc</span>
                 </button>
               </div>`
             : ''
         }
       </div>
-    `
-      )
-      .join('');
+    `;
+
+    for (const { item, origIdx } of otherItems) {
+      html += `
+        <div class="decision-item is-queued" data-promote-idx="${origIdx}" title="Click to focus / review">
+          <div class="decision-meta">
+            <span class="decision-meta-ref">${gripSvg} #${esc(item.ref)}</span>
+            <span>${esc(item.time)}</span>
+          </div>
+          <div class="decision-title">${esc(item.title)}</div>
+          <div class="decision-sub">${esc(item.sub)}</div>
+        </div>
+      `;
+    }
+
+    queueEl.innerHTML = html;
 
     queueEl.querySelectorAll('[data-q-id]').forEach((btn) => {
-      btn.addEventListener('click', () =>
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         executeDecisionItem(
           btn.getAttribute('data-q-kind'),
           btn.getAttribute('data-q-id'),
           btn.getAttribute('data-q-act')
-        )
-      );
+        );
+      });
+    });
+
+    queueEl.querySelectorAll('[data-promote-idx]').forEach((card) => {
+      card.addEventListener('click', () => {
+        state.activeQueueIndex = Number(card.getAttribute('data-promote-idx')) || 0;
+        renderNeedsYouQueue(state.lastOverviewData, state.lastLeavesData, state.lastDevicesData);
+      });
     });
   }
 
@@ -655,56 +947,13 @@
     }
   }
 
-  async function loadOverview() {
-    if (state.user.role === 'platform_super_admin') {
-      switchTab('subscription');
-      return;
-    }
+  function applyOverviewFiltersAndRender() {
+    if (!state.lastOverviewData) return;
+    renderBranchesTree();
 
-    const [ovRes, lvRes, devRes, empRes, refRes] = await Promise.all([
-      apiFetch('/api/dashboard/overview'),
-      apiFetch('/api/leaves').catch(() => ({ ok: false })),
-      apiFetch('/api/devices').catch(() => ({ ok: false })),
-      apiFetch('/api/employees').catch(() => ({ ok: false })),
-      apiFetch('/api/reference-data').catch(() => ({ ok: false })),
-    ]);
+    const data = state.lastOverviewData;
+    const { events, employees } = getFilteredEventsAndEmployees();
 
-    if (!ovRes.ok) return;
-    const data = ovRes.data;
-    state.lastOverviewData = data;
-    state.lastEmployeesData = empRes.ok ? empRes.data.employees || [] : [];
-
-    // Populate Sidebar Tenant, Branches & Live Telemetry
-    if (data.company) {
-      state.company = data.company;
-      setText('sidebar-company-name', state.lang === 'ar' ? data.company.name_ar : data.company.name_en);
-      setText('ops-chrome-tenant', `${data.company.country_code || 'EG'} · ${data.company.timezone || 'Africa/Cairo'}`);
-    }
-
-    const m = data.metrics;
-    setText('live-present-count', String(m.presentCount));
-    setText('live-late-count', String(m.pendingExceptions));
-    setText('live-alert-count', String(m.suspiciousOrRejected));
-    setText('nav-badge-employees', String(m.totalEmployees));
-
-    if (refRes.ok && refRes.data.branches) {
-      state.referenceData = refRes.data;
-      const brTree = document.getElementById('sidebar-branches-tree');
-      if (brTree) {
-        brTree.innerHTML = refRes.data.branches
-          .map((b) => {
-            const bName = state.lang === 'ar' ? b.name_ar : b.name_en;
-            return `<button type="button" class="side-branch-btn" data-branch-jump="${esc(b.id)}"><span>📁 ${esc(bName)}</span><span style="color:var(--text-muted);font-size:0.72rem;">${esc(b.code)}</span></button>`;
-          })
-          .join('');
-        brTree.querySelectorAll('[data-branch-jump]').forEach((btn) => {
-          btn.addEventListener('click', () => switchTab('attendance'));
-        });
-      }
-    }
-
-    // Populate Hero Left Column Metrics
-    const events = data.recentEvents || [];
     const verifiedBio = events.filter((e) => e.biometric_verified).length;
     const bioRate = events.length ? `${Math.round((verifiedBio / events.length) * 100)}%` : '—';
     const distEvents = events.filter((e) => typeof e.calculated_distance_meters === 'number');
@@ -712,13 +961,17 @@
       ? `${Math.round(distEvents.reduce((acc, e) => acc + e.calculated_distance_meters, 0) / distEvents.length)} m`
       : '—';
     const acceptedCount = events.filter((e) => e.sync_status === 'accepted').length;
+    const m = data.metrics;
 
     setText('hero-total-runs', String(events.length));
     setText('hero-trend-badge', `${acceptedCount}/${events.length || 0} ${t('legVerified')}`);
     setText('hero-trend-note', `${m.presentCount}/${m.totalEmployees} ${t('opsLivePresent')}`);
     setText('hero-kv-bio-val', bioRate);
     setText('hero-kv-dist-val', avgDist);
-    setText('hero-kv-peak-val', events.length ? new Date(events[0].server_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '09:00');
+    setText(
+      'hero-kv-peak-val',
+      events.length ? new Date(events[0].server_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '09:00'
+    );
 
     const insightEl = document.getElementById('hero-insight-text');
     if (insightEl) {
@@ -735,25 +988,13 @@
       }
     }
 
-    // Render Hero SVG Chart, Pulse Streams, and Needs You Queue
     renderHeroChart(state.chartMode, events);
-    renderWorkflowsPulse(events, state.lastEmployeesData);
-    renderNeedsYouQueue(data, lvRes.ok ? lvRes.data : null, devRes.ok ? devRes.data : null);
+    renderWorkflowsPulse(events, employees);
+    renderNeedsYouQueue(data, state.lastLeavesData, state.lastDevicesData);
 
-    // Render Compact KPI Strip
-    const kpiContainer = document.getElementById('overview-kpis');
-    kpiContainer.innerHTML = `
-      <div class="kpi-card"><div class="kpi-label">${t('kpiTotalEmployees')}</div><div class="kpi-value">${m.totalEmployees}</div></div>
-      <div class="kpi-card"><div class="kpi-label">${t('kpiPresent')}</div><div class="kpi-value" style="color:#1a4715;">${m.presentCount}</div></div>
-      <div class="kpi-card"><div class="kpi-label">${t('kpiAbsent')}</div><div class="kpi-value" style="color:#991b1b;">${m.absentCount}</div></div>
-      <div class="kpi-card"><div class="kpi-label">${t('kpiLate')}</div><div class="kpi-value" style="color:#854d0e;">${m.lateCount}</div></div>
-      <div class="kpi-card"><div class="kpi-label">${t('kpiExceptions')}</div><div class="kpi-value" style="color:#b45309;">${m.pendingExceptions}</div></div>
-      <div class="kpi-card"><div class="kpi-label">${t('kpiSuspicious')}</div><div class="kpi-value" style="color:#dc2626;">${m.suspiciousOrRejected}</div></div>
-      <div class="kpi-card"><div class="kpi-label">${t('kpiPendingLeaves')}</div><div class="kpi-value">${m.pendingLeaves}</div></div>
-    `;
-
-    // Render Detailed Recent Events Table
+    // Recent Events Table
     const tbody = document.getElementById('tbody-recent-events');
+    if (!tbody) return;
     tbody.innerHTML = '';
     const q = state.searchQuery.trim().toLowerCase();
     for (const evt of events) {
@@ -782,7 +1023,7 @@
       tr.innerHTML = `
         <td><strong>${esc(empName)}</strong><br/><small>${esc(evt.employee_code)}</small></td>
         <td>${t('evt_' + evt.event_type)}</td>
-        <td><small>${new Date(evt.server_timestamp).toLocaleString(state.lang === 'ar' ? 'ar-EG' : 'en-GB')}</small></td>
+        <td><small class="mono">${new Date(evt.server_timestamp).toLocaleString(state.lang === 'ar' ? 'ar-EG' : 'en-GB')}</small></td>
         <td>${esc(wpName)}</td>
         <td>${distText} ${evt.geofence_passed ? '✅' : '❌'}</td>
         <td>${renderBiometricBadge(evt)}</td>
@@ -821,10 +1062,64 @@
     });
   }
 
+  async function loadOverview() {
+    if (state.user.role === 'platform_super_admin') {
+      switchTab('subscription');
+      return;
+    }
+
+    const [ovRes, lvRes, devRes, empRes, refRes] = await Promise.all([
+      apiFetch('/api/dashboard/overview'),
+      apiFetch('/api/leaves').catch(() => ({ ok: false })),
+      apiFetch('/api/devices').catch(() => ({ ok: false })),
+      apiFetch('/api/employees').catch(() => ({ ok: false })),
+      apiFetch('/api/reference-data').catch(() => ({ ok: false })),
+    ]);
+
+    if (!ovRes.ok) return;
+    const data = ovRes.data;
+    state.lastOverviewData = data;
+    state.lastLeavesData = lvRes.ok ? lvRes.data : null;
+    state.lastDevicesData = devRes.ok ? devRes.data : null;
+    state.lastEmployeesData = empRes.ok ? empRes.data.employees || [] : [];
+    if (refRes.ok) state.referenceData = refRes.data;
+
+    if (data.company) {
+      state.company = data.company;
+      setText('sidebar-company-name', state.lang === 'ar' ? data.company.name_ar : data.company.name_en);
+      setText('ops-chrome-tenant', `${data.company.country_code || 'EG'} · ${data.company.timezone || 'Africa/Cairo'}`);
+    }
+
+    const m = data.metrics;
+    setText('live-present-count', String(m.presentCount));
+    setText('live-late-count', String(m.pendingExceptions));
+    setText('live-alert-count', String(m.suspiciousOrRejected));
+    setText('nav-badge-employees', String(m.totalEmployees));
+
+    const kpiContainer = document.getElementById('overview-kpis');
+    if (kpiContainer) {
+      kpiContainer.innerHTML = `
+        <div class="kpi-card"><div class="kpi-label">${t('kpiTotalEmployees')}</div><div class="kpi-value">${m.totalEmployees}</div></div>
+        <div class="kpi-card"><div class="kpi-label">${t('kpiPresent')}</div><div class="kpi-value" style="color:#1D4D14;">${m.presentCount}</div></div>
+        <div class="kpi-card"><div class="kpi-label">${t('kpiAbsent')}</div><div class="kpi-value" style="color:#B42318;">${m.absentCount}</div></div>
+        <div class="kpi-card"><div class="kpi-label">${t('kpiLate')}</div><div class="kpi-value" style="color:#854D0E;">${m.lateCount}</div></div>
+        <div class="kpi-card"><div class="kpi-label">${t('kpiExceptions')}</div><div class="kpi-value" style="color:#B45309;">${m.pendingExceptions}</div></div>
+        <div class="kpi-card"><div class="kpi-label">${t('kpiSuspicious')}</div><div class="kpi-value" style="color:#F04438;">${m.suspiciousOrRejected}</div></div>
+        <div class="kpi-card"><div class="kpi-label">${t('kpiPendingLeaves')}</div><div class="kpi-value">${m.pendingLeaves}</div></div>
+      `;
+    }
+
+    applyOverviewFiltersAndRender();
+  }
+
+  // ==========================================================================
+  // MOBILE TERMINAL, ATTENDANCE REGISTER, EMPLOYEES, WORKPLACES, LEAVES, DEVICES, SUBSCRIPTION
+  // ==========================================================================
   async function loadMobileAttendanceContext() {
     const { ok, data } = await apiFetch('/api/employee/context');
     const summaryEl = document.getElementById('mobile-context-summary');
     const wpSelect = document.getElementById('mobile-workplace-select');
+    if (!summaryEl || !wpSelect) return;
 
     if (!ok) {
       summaryEl.innerHTML = `<div class="alert alert-warn">${data.message || 'No employee profile bound to this account.'}</div>`;
@@ -835,7 +1130,7 @@
     state.workplaces = data.authorizedWorkplaces || [];
 
     const empName = state.lang === 'ar' ? data.employee.full_name_ar : data.employee.full_name_en;
-    document.getElementById('mobile-emp-badge').textContent = `${empName} (${data.employee.employee_code})`;
+    setText('mobile-emp-badge', `${empName} (${data.employee.employee_code})`);
 
     const shiftName = data.shift
       ? state.lang === 'ar'
@@ -865,7 +1160,8 @@
   }
 
   function computeSimulatedCoordinates() {
-    const wpId = document.getElementById('mobile-workplace-select').value;
+    const wpSel = document.getElementById('mobile-workplace-select');
+    const wpId = wpSel ? wpSel.value : '';
     const wp = state.workplaces.find((w) => w.id === wpId) || state.workplaces[0] || {
       id: 'wp_cairo_hq',
       latitude: 29.9697,
@@ -873,7 +1169,8 @@
       radius_meters: 150,
     };
 
-    const scenario = document.getElementById('mobile-loc-scenario').value;
+    const scenEl = document.getElementById('mobile-loc-scenario');
+    const scenario = scenEl ? scenEl.value : 'inside';
     const nowMs = Date.now();
 
     if (scenario === 'inside') {
@@ -1001,6 +1298,7 @@
 
   function renderOfflineQueue() {
     const box = document.getElementById('offline-queue-box');
+    if (!box) return;
     if (!state.offlineQueue.length) {
       box.innerHTML = `<span style="color:var(--text-muted);">Offline Pending Queue: 0 events</span>`;
       return;
@@ -1084,11 +1382,8 @@
         method: 'POST',
         body: JSON.stringify({ ...item, isOfflineSubmission: true }),
       });
-      if (ok) {
-        acceptedCount++;
-      } else {
-        rejectedCount++;
-      }
+      if (ok) acceptedCount++;
+      else rejectedCount++;
     }
 
     state.offlineQueue = remaining;
@@ -1157,21 +1452,28 @@
       state.referenceData = refRes.data;
       const brSel = document.getElementById('emp-branch');
       const shSel = document.getElementById('emp-shift');
-      brSel.innerHTML = refRes.data.branches
-        .map((b) => `<option value="${b.id}">${esc(state.lang === 'ar' ? b.name_ar : b.name_en)}</option>`)
-        .join('');
-      shSel.innerHTML = refRes.data.shifts
-        .map((s) => `<option value="${s.id}">${esc(state.lang === 'ar' ? s.name_ar : s.name_en)}</option>`)
-        .join('');
+      if (brSel) {
+        brSel.innerHTML = refRes.data.branches
+          .map((b) => `<option value="${b.id}">${esc(state.lang === 'ar' ? b.name_ar : b.name_en)}</option>`)
+          .join('');
+      }
+      if (shSel) {
+        shSel.innerHTML = refRes.data.shifts
+          .map((s) => `<option value="${s.id}">${esc(state.lang === 'ar' ? s.name_ar : s.name_en)}</option>`)
+          .join('');
+      }
     }
     if (wpRes.ok) {
       const wpSel = document.getElementById('emp-workplace');
-      wpSel.innerHTML = wpRes.data.workplaces
-        .map((w) => `<option value="${w.id}">${esc(state.lang === 'ar' ? w.name_ar : w.name_en)}</option>`)
-        .join('');
+      if (wpSel) {
+        wpSel.innerHTML = wpRes.data.workplaces
+          .map((w) => `<option value="${w.id}">${esc(state.lang === 'ar' ? w.name_ar : w.name_en)}</option>`)
+          .join('');
+      }
     }
     if (!empRes.ok) return;
     state.employeesList = empRes.data.employees || [];
+    state.lastEmployeesData = state.employeesList;
 
     const corrEmpSel = document.getElementById('corr-employee-id');
     if (corrEmpSel) {
@@ -1181,6 +1483,7 @@
     }
 
     const tbody = document.getElementById('tbody-employees');
+    if (!tbody) return;
     tbody.innerHTML = '';
     const q = state.searchQuery.trim().toLowerCase();
     for (const e of state.employeesList) {
@@ -1453,11 +1756,14 @@
 
     document.getElementById('view-login').classList.add('hidden');
     document.getElementById('view-workspace').classList.remove('hidden');
-    document.getElementById('btn-logout').classList.remove('hidden');
+    const logoutBtn = document.getElementById('btn-logout');
+    if (logoutBtn) logoutBtn.classList.remove('hidden');
 
     const badge = document.getElementById('ui-user-badge');
-    badge.classList.remove('hidden');
-    badge.textContent = `${state.user.email} (${state.user.role})`;
+    if (badge) {
+      badge.classList.remove('hidden');
+      badge.textContent = `${state.user.role}`;
+    }
 
     const displayName = state.employee
       ? (state.lang === 'ar' ? state.employee.full_name_ar : state.employee.full_name_en)
@@ -1474,6 +1780,8 @@
         .toUpperCase() || 'HR'
     );
 
+    startLiveClockTimer();
+
     if (state.user.role === 'employee') {
       switchTab('mobile');
     } else if (state.user.role === 'platform_super_admin') {
@@ -1481,6 +1789,22 @@
     } else {
       switchTab('overview');
     }
+  }
+
+  function signOut() {
+    state.token = null;
+    state.user = null;
+    if (state.liveTimer) {
+      clearInterval(state.liveTimer);
+      state.liveTimer = null;
+    }
+    localStorage.removeItem('wehr_token');
+    document.getElementById('view-workspace').classList.add('hidden');
+    const logoutBtn = document.getElementById('btn-logout');
+    if (logoutBtn) logoutBtn.classList.add('hidden');
+    const badge = document.getElementById('ui-user-badge');
+    if (badge) badge.classList.add('hidden');
+    document.getElementById('view-login').classList.remove('hidden');
   }
 
   function toggleLanguage() {
@@ -1494,20 +1818,28 @@
     }
   }
 
-  // Event Listeners
-  document.getElementById('btn-lang-toggle').addEventListener('click', toggleLanguage);
+  // Event Listeners (null-safe bindings)
+  const langToggleBtn = document.getElementById('btn-lang-toggle');
+  if (langToggleBtn) langToggleBtn.addEventListener('click', toggleLanguage);
   const railLangBtn = document.getElementById('btn-rail-lang');
   if (railLangBtn) railLangBtn.addEventListener('click', toggleLanguage);
 
-  document.getElementById('btn-logout').addEventListener('click', () => {
-    state.token = null;
-    state.user = null;
-    localStorage.removeItem('wehr_token');
-    document.getElementById('view-workspace').classList.add('hidden');
-    document.getElementById('btn-logout').classList.add('hidden');
-    document.getElementById('ui-user-badge').classList.add('hidden');
-    document.getElementById('view-login').classList.remove('hidden');
-  });
+  const logoutBtn = document.getElementById('btn-logout');
+  if (logoutBtn) logoutBtn.addEventListener('click', signOut);
+  const railLogoutBtn = document.getElementById('btn-rail-logout');
+  if (railLogoutBtn) railLogoutBtn.addEventListener('click', signOut);
+
+  const addBranchJumpBtn = document.getElementById('btn-add-branch-jump');
+  if (addBranchJumpBtn) addBranchJumpBtn.addEventListener('click', () => switchTab('workplaces'));
+
+  const clearFilterChip = document.getElementById('branch-filter-chip');
+  if (clearFilterChip) {
+    clearFilterChip.addEventListener('click', () => {
+      state.selectedBranchId = null;
+      state.selectedDeptId = null;
+      applyOverviewFiltersAndRender();
+    });
+  }
 
   document.getElementById('form-login').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1548,7 +1880,8 @@
         b.classList.toggle('active', b.getAttribute('data-chart-mode') === state.chartMode)
       );
       if (state.lastOverviewData) {
-        renderHeroChart(state.chartMode, state.lastOverviewData.recentEvents || []);
+        const { events } = getFilteredEventsAndEmployees();
+        renderHeroChart(state.chartMode, events);
       }
     });
   });
@@ -1560,7 +1893,8 @@
         b.classList.toggle('active', b.getAttribute('data-pulse-filter') === state.pulseFilter)
       );
       if (state.lastOverviewData) {
-        renderWorkflowsPulse(state.lastOverviewData.recentEvents || [], state.lastEmployeesData);
+        const { events, employees } = getFilteredEventsAndEmployees();
+        renderWorkflowsPulse(events, employees);
       }
     });
   });
@@ -1582,7 +1916,7 @@
       const activeTab = document.querySelector('.nav-tab.active');
       const tabName = activeTab ? activeTab.getAttribute('data-tab') : 'overview';
       if (tabName === 'overview' && state.lastOverviewData) {
-        loadOverview();
+        applyOverviewFiltersAndRender();
       } else if (tabName === 'employees') {
         loadEmployeesTab();
       }
@@ -1590,30 +1924,37 @@
   }
 
   document.addEventListener('keydown', (ev) => {
+    const ws = document.getElementById('view-workspace');
+    if (!ws || ws.classList.contains('hidden')) return;
+
     if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'k') {
-      if (quickSearchEl && !document.getElementById('view-workspace').classList.contains('hidden')) {
+      if (quickSearchEl) {
         ev.preventDefault();
         quickSearchEl.focus();
       }
+      return;
+    }
+
+    // Queue keyboard shortcuts (only when Overview is active and not typing in inputs/buttons)
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(tag)) return;
+    const ovTab = document.getElementById('tab-overview');
+    if (!ovTab || ovTab.classList.contains('hidden')) return;
+    if (!state.pendingQueueItems.length) return;
+    const canDecide = state.user && ['company_owner', 'hr_admin', 'branch_manager', 'supervisor'].includes(state.user.role);
+    if (!canDecide) return;
+
+    const active = state.pendingQueueItems[state.activeQueueIndex] || state.pendingQueueItems[0];
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      executeDecisionItem(active.kind, active.id, 'approve');
+    } else if (ev.key === 'Escape') {
+      ev.preventDefault();
+      executeDecisionItem(active.kind, active.id, 'reject');
     }
   });
 
   const needsYouCard = document.getElementById('needs-you-card');
-  if (needsYouCard) {
-    needsYouCard.setAttribute('tabindex', '-1');
-    needsYouCard.addEventListener('keydown', (ev) => {
-      if (!state.pendingQueueItems.length) return;
-      const top = state.pendingQueueItems[0];
-      if (ev.key === 'Enter' && ev.target.tagName !== 'BUTTON') {
-        ev.preventDefault();
-        executeDecisionItem(top.kind, top.id, 'approve');
-      } else if (ev.key === 'Escape') {
-        ev.preventDefault();
-        executeDecisionItem(top.kind, top.id, 'reject');
-      }
-    });
-  }
-
   const headerRecordBtn = document.getElementById('btn-header-record-attendance');
   if (headerRecordBtn) headerRecordBtn.addEventListener('click', () => switchTab('mobile'));
   const heroRegTopBtn = document.getElementById('btn-hero-open-register-top');
@@ -1627,19 +1968,14 @@
   const heroFocusQueueBtn = document.getElementById('btn-hero-focus-queue');
   if (heroFocusQueueBtn) {
     heroFocusQueueBtn.addEventListener('click', () => {
-      if (needsYouCard) {
-        needsYouCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        needsYouCard.focus();
-      }
+      if (needsYouCard) needsYouCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
   }
   const headerBellBtn = document.getElementById('btn-header-bell');
   if (headerBellBtn) {
     headerBellBtn.addEventListener('click', () => {
       switchTab('overview');
-      if (needsYouCard) {
-        needsYouCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+      if (needsYouCard) needsYouCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
   }
 
@@ -1655,7 +1991,6 @@
   });
 
   document.getElementById('btn-mob-sync-offline').addEventListener('click', syncOfflineQueue);
-
   document.getElementById('filter-att-date').addEventListener('change', loadAttendanceTab);
 
   document.getElementById('btn-export-csv').addEventListener('click', async () => {
@@ -1807,7 +2142,6 @@
     }
   });
 
-  // Initialize UI
   const todayIso = new Date().toISOString().slice(0, 10);
   document.getElementById('corr-date').value = todayIso;
   document.getElementById('lv-start').value = todayIso;
